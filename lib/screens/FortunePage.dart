@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+import '../widgets/main_layout.dart';
+import '../widgets/custom_app_bar.dart';
+
 class FortunePage extends StatefulWidget {
+  const FortunePage({super.key});
+
   @override
-  _FortunePageState createState() => _FortunePageState();
+  State<FortunePage> createState() => _FortunePageState();
 }
 
 class _FortunePageState extends State<FortunePage> {
@@ -11,7 +16,12 @@ class _FortunePageState extends State<FortunePage> {
   DateTimeRange? selectedDateRange;
   String? fortuneResult;
 
-  final List<String> provinces = ['ขอนแก่น', 'บุรีรัมย์', 'สุรินทร์', 'อุดรธานี'];
+  final List<String> provinces = [
+    'ขอนแก่น',
+    'บุรีรัมย์',
+    'สุรินทร์',
+    'อุดรธานี'
+  ];
 
   final List<String> fortunes = [
     "วันนี้คุณจะพบสิ่งที่ไม่คาดฝัน",
@@ -34,11 +44,8 @@ class _FortunePageState extends State<FortunePage> {
 
   void drawFortune() {
     if (selectedProvince != null && selectedDateRange != null) {
-      final random = Random();
-      final result = fortunes[random.nextInt(fortunes.length)];
-      setState(() {
-        fortuneResult = result;
-      });
+      final result = fortunes[Random().nextInt(fortunes.length)];
+      setState(() => fortuneResult = result);
     } else {
       setState(() {
         fortuneResult = "กรุณาเลือกจังหวัดและช่วงวันที่ก่อนเสี่ยงดวงนะ!";
@@ -48,121 +55,138 @@ class _FortunePageState extends State<FortunePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF9FBFD),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              color: Colors.black,
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Text(
-                  'TripPlan',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.greenAccent,
+    return MainLayout(
+      appBar: const CustomAppBar(),
+      currentIndex: 0, // หรือ 1
+      onTap: (index) {
+        if (index == 0) {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context); // 🔙 ย้อนกลับ
+          } else {
+            Navigator.pushReplacementNamed(
+                context, '/home'); // fallback ไปหน้า home
+          }
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      },
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: const Color(0xFFF9FBFD),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const Text(
+                'เสี่ยงดวง✨',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // จังหวัด
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    hint: const Text("จังหวัดที่จะไป?"),
+                    value: selectedProvince,
+                    items: provinces
+                        .map((prov) => DropdownMenuItem(
+                              value: prov,
+                              child: Text(prov),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => selectedProvince = value);
+                    },
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 30),
-            Text(
-              'เสี่ยงดวง✨',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        hint: Text("จังหวัดที่จะไป?"),
-                        value: selectedProvince,
-                        items: provinces
-                            .map((prov) => DropdownMenuItem(
-                                  child: Text(prov),
-                                  value: prov,
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedProvince = value;
-                          });
-                        },
-                      ),
-                    ),
+
+              // วันที่
+              InkWell(
+                onTap: pickDateRange,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  margin: const EdgeInsets.only(bottom: 32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  SizedBox(height: 16),
-                  InkWell(
-                    onTap: pickDateRange,
-                    child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today, size: 16),
-                              SizedBox(width: 8),
-                              Text(selectedDateRange == null
-                                  ? "เริ่มต้น"
-                                  : "${selectedDateRange!.start.toLocal()}".split(' ')[0]),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today, size: 16),
-                              SizedBox(width: 8),
-                              Text(selectedDateRange == null
-                                  ? "สิ้นสุด"
-                                  : "${selectedDateRange!.end.toLocal()}".split(' ')[0]),
-                            ],
+                          const Icon(Icons.calendar_today, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            selectedDateRange == null
+                                ? "เริ่มต้น"
+                                : "${selectedDateRange!.start.toLocal()}"
+                                    .split(' ')[0],
                           ),
                         ],
                       ),
-                    ),
+                      const Text('|'),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            selectedDateRange == null
+                                ? "สิ้นสุด"
+                                : "${selectedDateRange!.end.toLocal()}"
+                                    .split(' ')[0],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: drawFortune,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purpleAccent,
-                      shape: StadiumBorder(),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                    ),
-                    child: Text(
-                      'เริ่มสุ่มดวง',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                  ),
-                  if (fortuneResult != null) ...[
-                    SizedBox(height: 24),
-                    Text(
-                      fortuneResult!,
-                      style: TextStyle(fontSize: 18),
-                      textAlign: TextAlign.center,
-                    )
-                  ]
-                ],
+                ),
               ),
-            )
-          ],
+
+              // ปุ่มสุ่ม
+              ElevatedButton(
+                onPressed: drawFortune,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purpleAccent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  'เริ่มสุ่มดวง',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+
+              if (fortuneResult != null) ...[
+                const SizedBox(height: 24),
+                Text(
+                  fortuneResult!,
+                  style: const TextStyle(fontSize: 18),
+                  textAlign: TextAlign.center,
+                )
+              ]
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tripplan_1/screens/HomePage.dart';
-import 'package:tripplan_1/screens/FortunePage.dart'; 
+import 'package:tripplan_1/screens/FortunePage.dart';
+import 'package:tripplan_1/widgets/main_layout.dart';
+import 'package:tripplan_1/widgets/custom_app_bar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +20,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MainScreen(), // เปลี่ยนจาก HomeScreen เป็น MainScreen
+      initialRoute: '/home',
+      routes: {
+        '/home': (context) => const HomeScreen(),
+        '/fortune': (context) => const FortunePage(),
+      },
     );
   }
 }
@@ -34,8 +40,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    HomeScreen(), // หน้าแรก
-    FortunePage(), // หน้าเสี่ยงดวง
+    HomeScreen(),
+    FortunePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -46,25 +52,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MainLayout(
+      appBar: const CustomAppBar(),
+      currentIndex: _selectedIndex,
+      onTap: _onItemTapped,
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
-            label: '',
-          ),
-        ],
-      ),
     );
   }
 }
