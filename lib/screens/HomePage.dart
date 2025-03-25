@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                       title: "Custom plan",
                       subtitle: "เลือกการวางแผนด้วยตัวเอง",
                       onTap: () {
-                        // TODO: ไปหน้า custom plan
+                        Navigator.pushNamed(context, '/customplan');
                       },
                     ),
                     const SizedBox(height: 15),

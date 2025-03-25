@@ -3,6 +3,7 @@ import 'package:tripplan_1/screens/HomePage.dart';
 import 'package:tripplan_1/screens/FortunePage.dart';
 import 'package:tripplan_1/widgets/main_layout.dart';
 import 'package:tripplan_1/widgets/custom_app_bar.dart';
+import 'screens/CustomplanPage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/home': (context) => const HomeScreen(),
         '/fortune': (context) => const FortunePage(),
+        '/customplan': (context) => const CustomplanPage(),
       },
     );
   }
@@ -40,8 +42,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    HomeScreen(),
-    FortunePage(),
+    const HomeScreen(),
+    const FortunePage(),
   ];
 
   void _onItemTapped(int index) {
