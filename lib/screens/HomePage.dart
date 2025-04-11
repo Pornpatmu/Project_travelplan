@@ -13,14 +13,10 @@ class HomeScreen extends StatelessWidget {
       currentIndex: 0,
       onTap: (index) {
         if (index == 0) {
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context); // 🔙 ย้อนกลับ
-          } else {
-            Navigator.pushReplacementNamed(
-                context, '/home'); // fallback ไปหน้า home
-          }
-        } else {
-          Navigator.pushReplacementNamed(context, '/home');
+        } else if (index == 1) {
+          Navigator.pushReplacementNamed(context, '/fortune');
+        } else if (index == 2) {
+          Navigator.pushReplacementNamed(context, '/customplan');
         }
       },
       body: Center(
@@ -70,7 +66,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 30),
             TextButton(
               onPressed: () {
-                // TODO: ไปหน้าดูประวัติการวางแผน
+                Navigator.pushNamed(context, '/history');
               },
               child: const Text(
                 "ดูประวัติการวางแผน",

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import '../models/travel_plan.dart';
 
 class EditBudgetPage extends StatefulWidget {
-  final double initialBudget;
-  final Map<int, List<Map<String, dynamic>>> placesByDay;
+  final TravelPlan plan;
   final Function(double, double, List<Map<String, dynamic>>) onSave;
-  final List<Map<String, dynamic>>? initialOtherExpenses;
 
   const EditBudgetPage({
     super.key,
-    required this.initialBudget,
-    required this.placesByDay,
-    required this.initialOtherExpenses,
+    required this.plan,
     required this.onSave,
   });
 
@@ -20,9 +17,11 @@ class EditBudgetPage extends StatefulWidget {
 
 class _EditBudgetPageState extends State<EditBudgetPage> {
   TextEditingController budgetController = TextEditingController();
+  late List<Map<String, dynamic>> otherExpenses;
+
   double get calculatedSpending {
     double fromPlaces = 0.0;
-    widget.placesByDay.forEach((day, places) {
+    widget.plan.placesByDay.forEach((day, places) {
       for (var place in places) {
         fromPlaces += place['expense'] ?? 0.0;
       }
@@ -32,17 +31,32 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
       0.0,
       (sum, item) => sum + (item['amount'] ?? 0.0),
     );
+    debugPrint('[DEBUG] Spending from places: $fromPlaces');
+    debugPrint('[DEBUG] Spending from other expenses: $fromOthers');
 
     return fromPlaces + fromOthers;
   }
 
-  List<Map<String, dynamic>> otherExpenses = [];
   @override
   void initState() {
     super.initState();
-    budgetController.text = widget.initialBudget.toString();
-    otherExpenses =
-        List<Map<String, dynamic>>.from(widget.initialOtherExpenses ?? []);
+    debugPrint('[DEBUG] Initial budget: ${widget.plan.budget}');
+
+    budgetController.text = widget.plan.budget.toString();
+    otherExpenses = widget.plan.otherExpenses.map((expense) {
+      final icon = expense['icon'];
+      final iconCode = expense['icon_code'];
+      return {
+        'desc': expense['desc'],
+        'amount': expense['amount'],
+        'icon': icon ??
+            (iconCode != null
+                ? IconData(iconCode, fontFamily: 'MaterialIcons')
+                : Icons.receipt),
+      };
+    }).toList();
+
+    debugPrint('[DEBUG] Initial otherExpenses with icons: $otherExpenses');
   }
 
   @override
@@ -52,8 +66,13 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
   }
 
   void handleSave() {
-    final newBudget = double.tryParse(budgetController.text) ?? 0.0;
+    final newBudget =
+        double.tryParse(budgetController.text) ?? widget.plan.budget;
     final newSpending = calculatedSpending;
+
+    debugPrint('[DEBUG] Saving new budget: $newBudget');
+    debugPrint('[DEBUG] Saving new spending: $newSpending');
+    debugPrint('[DEBUG] Saving updated otherExpenses: $otherExpenses');
 
     widget.onSave(newBudget, newSpending, otherExpenses);
   }
@@ -73,7 +92,6 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 🔸 งบและใช้จ่าย (พร้อมกรอก)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
               decoration: const BoxDecoration(
@@ -88,8 +106,6 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // 🔸 ปุ่มเพิ่มไอคอนประเภท
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -99,8 +115,6 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // 🔸 รายการค่าใช้จ่ายอื่น ๆ
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -111,8 +125,7 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   InkWell(
-                    onTap: () =>
-                        _showAddExpenseDialog(Icons.receipt), // หรือ icon อื่น
+                    onTap: () => _showAddExpenseDialog(Icons.receipt),
                     child: const Row(
                       children: [
                         Icon(Icons.add_circle,
@@ -141,8 +154,6 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // 🔸 ปุ่มบันทึก
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -189,18 +200,22 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
           width: 100,
           child: TextField(
             controller: controller,
-            keyboardType: TextInputType.number,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(
               color: Color(0xFF1B9D66),
+              fontSize: 16,
             ),
             decoration: const InputDecoration(
               isDense: true,
-              suffixText: "บาท",
-              suffixStyle: TextStyle(color: Color(0xFF1B9D66)),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              border: OutlineInputBorder(),
+              prefix: Text(
+                '฿',
+                style: TextStyle(
+                  color: Color(0xFF1B9D66), // สีเขียวสำหรับ "฿"
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
         ),
@@ -233,7 +248,6 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
       builder: (_) => AlertDialog(
         title: const Text("เพิ่มรายการใช้จ่าย"),
         content: SingleChildScrollView(
-          // 🔥 แก้ตรงนี้
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

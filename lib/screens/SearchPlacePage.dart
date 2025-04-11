@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SearchPlacePage extends StatefulWidget {
   final LatLng center;
@@ -20,78 +22,39 @@ class SearchPlacePage extends StatefulWidget {
 
 class _SearchPlacePageState extends State<SearchPlacePage> {
   String? selectedCategory;
+  List<Map<String, dynamic>> allPlaces = [];
   List<Map<String, dynamic>> favoritePlaces = [];
+
   @override
   void initState() {
     super.initState();
-
     favoritePlaces =
         List<Map<String, dynamic>>.from(widget.initialFavorites ?? []);
+    fetchPlaces();
   }
 
-  final List<Map<String, dynamic>> mockPlaces = [
-    {
-      'name': 'จ้วด คาเฟ่',
-      'lat': 16.4351,
-      'lon': 102.8283,
-      'category': 'food',
-      'province': 'ขอนแก่น',
-    },
-    {
-      'name': 'ไก่ย่างระเบียบ',
-      'lat': 16.4378,
-      'lon': 102.8320,
-      'category': 'food',
-      'province': 'ขอนแก่น',
-    },
-    {
-      'name': 'ร้านอาหารเด้อหล่าแจ๊ส Der La Jazz',
-      'lat': 16.4335,
-      'lon': 102.8239,
-      'category': 'food',
-      'province': 'ขอนแก่น',
-      'image': 'assets/images/Res2.jpg',
-      'openingDays': 'จันทร์ อังคาร พุธ พฤหัส ศุกร์ เสาร์',
-      'phone': '081-225-5589',
-    },
-    {
-      'name': 'โรงแรมพูลแมน',
-      'lat': 16.4289,
-      'lon': 102.8333,
-      'category': 'hotel',
-      'province': 'ขอนแก่น',
-    },
-    {
-      'name': 'Ad Lib Khon Kaen',
-      'lat': 16.4305,
-      'lon': 102.8279,
-      'category': 'hotel',
-      'province': 'ขอนแก่น',
-    },
-    {
-      'name': 'บึงแก่นนคร',
-      'lat': 16.4202,
-      'lon': 102.8347,
-      'category': 'tourist',
-      'province': 'ขอนแก่น',
-    },
-    {
-      'name': 'ตลาดต้นตาล',
-      'lat': 16.4253,
-      'lon': 102.8239,
-      'category': 'tourist',
-      'province': 'ขอนแก่น',
-    },
-  ];
+  Future<void> fetchPlaces() async {
+    final url = Uri.parse(
+        'http://10.0.2.2:3000/places?province=${Uri.encodeComponent(widget.province)}');
+    final res = await http.get(url);
+
+    if (res.statusCode == 200) {
+      final List<dynamic> data = json.decode(res.body);
+      setState(() {
+        allPlaces = List<Map<String, dynamic>>.from(data);
+      });
+    } else {
+      debugPrint('[ERROR] Failed to load places: ${res.body}');
+    }
+  }
 
   List<Marker> getFilteredMarkers() {
     final markers = <Marker>[];
 
-    final filtered = mockPlaces.where((place) {
+    final filtered = allPlaces.where((place) {
       final matchCategory =
           selectedCategory == null || place['category'] == selectedCategory;
-      final matchProvince = place['province'] == widget.province;
-      return matchCategory && matchProvince;
+      return matchCategory;
     });
 
     for (var place in filtered) {
@@ -102,36 +65,33 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
           height: 40,
           child: GestureDetector(
             onTap: () => _showPlaceDetails(place),
-            child: GestureDetector(
-              onTap: () => _showPlaceDetails(place),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: place['category'] == 'food'
-                      ? Colors.green
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: place['category'] == 'food'
+                    ? Colors.green
+                    : place['category'] == 'hotel'
+                        ? Colors.pink
+                        : Colors.orange,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  place['category'] == 'food'
+                      ? Icons.restaurant
                       : place['category'] == 'hotel'
-                          ? Colors.pink
-                          : Colors.orange,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    )
-                  ],
-                ),
-                child: Center(
-                  child: Icon(
-                    place['category'] == 'food'
-                        ? Icons.restaurant
-                        : place['category'] == 'hotel'
-                            ? Icons.hotel
-                            : Icons.place,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                          ? Icons.hotel
+                          : Icons.place,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),

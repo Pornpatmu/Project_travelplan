@@ -3,6 +3,7 @@ import 'package:tripplan_1/screens/HomePage.dart';
 import 'package:tripplan_1/screens/FortunePage.dart';
 import 'package:tripplan_1/widgets/main_layout.dart';
 import 'package:tripplan_1/widgets/custom_app_bar.dart';
+import 'package:tripplan_1/screens/HistoryPage.dart';
 import 'screens/CustomplanPage.dart';
 
 void main() {
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/fortune': (context) => const FortunePage(),
         '/customplan': (context) => const CustomplanPage(),
+        '/history': (context) => const HistoryScreen(),
       },
     );
   }

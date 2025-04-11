@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../services/api.dart';
 
 class ViewRoutePage extends StatefulWidget {
   final Map<int, List<Map<String, dynamic>>> placesByDay;
@@ -17,6 +18,12 @@ class ViewRoutePage extends StatefulWidget {
 }
 
 class _ViewRoutePageState extends State<ViewRoutePage> {
+  @override
+  void initState() {
+    super.initState();
+    fetchPlaceDetailsIfNeeded();
+  }
+
   int selectedDay = 0;
 
   List<LatLng> _getRoutePoints() {
@@ -25,6 +32,23 @@ class _ViewRoutePageState extends State<ViewRoutePage> {
         .where((place) => place.containsKey('lat') && place.containsKey('lon'))
         .map((place) => LatLng(place['lat'], place['lon']))
         .toList();
+  }
+
+  Future<void> fetchPlaceDetailsIfNeeded() async {
+    for (int dayIndex in widget.placesByDay.keys) {
+      final dayList = widget.placesByDay[dayIndex]!;
+      for (var place in dayList) {
+        if (!place.containsKey('lat') || !place.containsKey('lon')) {
+          final fetched = await ApiService().getPlaceById(place['place_id']);
+          if (fetched != null) {
+            place['lat'] = fetched['lat'];
+            place['lon'] = fetched['lon'];
+          }
+        }
+      }
+    }
+
+    setState(() {});
   }
 
   List<Marker> _getMarkers() {
@@ -59,6 +83,10 @@ class _ViewRoutePageState extends State<ViewRoutePage> {
 
   @override
   Widget build(BuildContext context) {
+    final todayPlaces = widget.placesByDay[selectedDay] ?? [];
+    debugPrint('selectedDay: $selectedDay');
+    debugPrint('places for today: $todayPlaces');
+
     final markers = _getMarkers();
     final routePoints = _getRoutePoints();
 
@@ -99,8 +127,7 @@ class _ViewRoutePageState extends State<ViewRoutePage> {
           ),
           Expanded(
             flex: 1,
-            child:
-                _buildDaySelector(), // ✅ อยู่ตรงนี้พอ ไม่ต้องเพิ่มซ้ำใน FlutterMap
+            child: _buildDaySelector(),
           ),
         ],
       ),

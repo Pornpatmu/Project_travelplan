@@ -43,14 +43,29 @@ class _FortunePageState extends State<FortunePage> {
   }
 
   void drawFortune() {
-    if (selectedProvince != null && selectedDateRange != null) {
-      final result = fortunes[Random().nextInt(fortunes.length)];
-      setState(() => fortuneResult = result);
-    } else {
-      setState(() {
-        fortuneResult = "กรุณาเลือกจังหวัดและช่วงวันที่ก่อนเสี่ยงดวงนะ!";
-      });
+    final now = DateTime.now();
+
+    if (selectedProvince == null || selectedDateRange == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("กรุณาเลือกจังหวัดและช่วงวันที่ก่อนเสี่ยงดวงนะ!"),
+        ),
+      );
+      return;
     }
+
+    if (selectedDateRange!.start
+        .isBefore(DateTime(now.year, now.month, now.day))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("ไม่สามารถเลือกวันที่ย้อนหลังได้นะ!"),
+        ),
+      );
+      return;
+    }
+
+    final result = fortunes[Random().nextInt(fortunes.length)];
+    setState(() => fortuneResult = result);
   }
 
   @override

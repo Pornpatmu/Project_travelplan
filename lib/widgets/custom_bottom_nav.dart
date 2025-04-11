@@ -28,9 +28,9 @@ class CustomBottomNav extends StatelessWidget {
           IconButton(
             icon: Icon(
               Icons.home,
-              color: currentIndex == 1 ? Colors.white : Colors.white54,
+              color: currentIndex == 0 ? Colors.white : Colors.white54,
             ),
-            onPressed: () => onTap(1),
+            onPressed: () => onTap(0),
           ),
 
           // เมนู 3 ขีด

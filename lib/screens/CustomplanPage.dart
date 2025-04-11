@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/custom_app_bar.dart';
+import '../services/api.dart';
 import 'PlanDetailPage.dart';
+import '../models/travel_plan.dart';
 
 class CustomplanPage extends StatefulWidget {
   const CustomplanPage({super.key});
@@ -14,12 +16,24 @@ class _CustomplanPageState extends State<CustomplanPage> {
   String? selectedProvince;
   DateTimeRange? selectedDateRange;
 
-  final List<String> provinces = [
-    'ขอนแก่น',
-    'บุรีรัมย์',
-    'สุรินทร์',
-    'อุดรธานี'
-  ];
+  List<String> provinces = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProvinces();
+  }
+
+  Future<void> fetchProvinces() async {
+    try {
+      provinces = await ApiService().getProvinces();
+    } catch (e) {
+      debugPrint('โหลดจังหวัดล้มเหลว: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
 
   Future<void> pickDateRange() async {
     final DateTimeRange? result = await showDateRangePicker(
@@ -32,33 +46,29 @@ class _CustomplanPageState extends State<CustomplanPage> {
     }
   }
 
-  void startPlanning() {
-    final now = DateTime.now();
-
+  void startPlanning() async {
     if (selectedProvince == null || selectedDateRange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("กรุณาเลือกจังหวัดและช่วงวันที่ก่อนเริ่มวางแผน")),
+        const SnackBar(content: Text("กรุณาเลือกจังหวัด และช่วงวันที่")),
       );
       return;
     }
 
-    if (selectedDateRange!.start
-        .isBefore(DateTime(now.year, now.month, now.day))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("ไม่สามารถเลือกวันที่ย้อนหลังได้")),
-      );
-      return;
-    }
+    final newPlan = TravelPlan(
+      id: 0,
+      name: "แผนเที่ยวใหม่",
+      province: selectedProvince!,
+      dateRange: selectedDateRange!,
+      budget: 0.0,
+      spending: 0.0,
+      favoritePlaces: [],
+      placesByDay: {},
+      otherExpenses: [],
+    );
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => PlanDetailPage(
-          selectedProvince: selectedProvince!,
-          selectedDateRange: selectedDateRange!,
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => PlanDetailPage(plan: newPlan)),
     );
   }
 
@@ -66,17 +76,16 @@ class _CustomplanPageState extends State<CustomplanPage> {
   Widget build(BuildContext context) {
     return MainLayout(
       appBar: const CustomAppBar(),
-      currentIndex: 0,
+      currentIndex: 2,
       onTap: (index) {
         switch (index) {
           case 0:
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pushReplacementNamed(context, '/home'); // หน้า Home
             break;
           case 1:
-            Navigator.pushReplacementNamed(context, '/fortune');
+            Navigator.pushReplacementNamed(context, '/fortune'); // หน้า Fortune
             break;
           case 2:
-            Navigator.pushReplacementNamed(context, '/customplan');
             break;
         }
       },
@@ -104,22 +113,24 @@ class _CustomplanPageState extends State<CustomplanPage> {
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    hint: const Text("จังหวัดที่จะไป?"),
-                    value: selectedProvince,
-                    items: provinces
-                        .map((prov) => DropdownMenuItem(
-                              value: prov,
-                              child: Text(prov),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => selectedProvince = value);
-                    },
-                  ),
-                ),
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: const Text("จังหวัดที่จะไป?"),
+                          value: selectedProvince,
+                          items: provinces
+                              .map((prov) => DropdownMenuItem(
+                                    value: prov,
+                                    child: Text(prov),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => selectedProvince = value);
+                          },
+                        ),
+                      ),
               ),
 
               // วันที่
@@ -169,7 +180,7 @@ class _CustomplanPageState extends State<CustomplanPage> {
 
               // ปุ่มเริ่มวางแผน
               ElevatedButton(
-                onPressed: startPlanning, // ไปหน้า PlanDetail
+                onPressed: startPlanning,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
                   padding:

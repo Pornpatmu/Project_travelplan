@@ -7,34 +7,22 @@ import 'SearchPlacePage.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 import 'RouterViewPage.dart';
+import '../models/travel_plan.dart';
+import '../services/api.dart';
+import 'dart:convert';
 
 class PlanDetailPage extends StatefulWidget {
-  final String selectedProvince;
-  final DateTimeRange selectedDateRange;
-  final String? initialPlanName;
-  final double? initialBudget;
-  final double? initialSpending;
-  final List<Map<String, dynamic>>? initialFavoritePlaces;
-  final Map<int, List<Map<String, dynamic>>>? initialPlacesByDay;
-  final List<Map<String, dynamic>>? initialOtherExpenses;
-
-  const PlanDetailPage({
-    super.key,
-    required this.selectedProvince,
-    required this.selectedDateRange,
-    this.initialPlanName,
-    this.initialBudget,
-    this.initialSpending,
-    this.initialFavoritePlaces,
-    this.initialPlacesByDay,
-    this.initialOtherExpenses,
-  });
+  final TravelPlan plan;
+  const PlanDetailPage({super.key, required this.plan});
 
   @override
   State<PlanDetailPage> createState() => _PlanDetailPageState();
 }
 
 class _PlanDetailPageState extends State<PlanDetailPage> {
+  bool isSaved = false;
+  LatLng? centerLatLng;
+  final api = ApiService();
   double budget = 0.0;
   double spending = 0.0;
   final int _currentIndex = 0;
@@ -45,33 +33,123 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
   List<Map<String, dynamic>> otherExpenses = [];
   Map<int, Color> dayColors = {};
   final PopupController _popupController = PopupController();
+  List<String> existingPlanNames = [];
+  Map<String, dynamic>? originalSnapshot;
+
+  late int _planId;
+  bool hasDataChanged({String? newPlanName, List? newFavoritePlaces}) {
+    if (newPlanName != null && newPlanName != planName) return true;
+    if (newFavoritePlaces != null &&
+        newFavoritePlaces.length != favoritePlaces.length) {
+      return true;
+    }
+    return false;
+  }
 
   @override
   void initState() {
     super.initState();
-
-    planName = widget.initialPlanName ?? '';
-    _planNameController.text = planName;
-    budget = widget.initialBudget ?? 0.0;
-    spending = widget.initialSpending ?? 0.0;
-    favoritePlaces = widget.initialFavoritePlaces ?? [];
-    placesByDay = widget.initialPlacesByDay ?? {};
-    otherExpenses = widget.initialOtherExpenses ?? [];
+    _planId = widget.plan.id;
+    fetchLatLngAndPlanDetails();
+    fetchAllPlanNames();
   }
 
-  LatLng getProvinceLatLng(String province) {
-    switch (province) {
-      case 'ขอนแก่น':
-        return const LatLng(16.4322, 102.8236);
-      case 'บุรีรัมย์':
-        return const LatLng(14.9946, 103.1036);
-      case 'สุรินทร์':
-        return const LatLng(14.8818, 103.4936);
-      case 'อุดรธานี':
-        return const LatLng(17.4138, 102.7872);
-      default:
-        return const LatLng(16.4322, 102.8236);
+  Future<void> fetchAllPlanNames() async {
+    final allPlans = await api.getAllPlans();
+    setState(() {
+      existingPlanNames = allPlans
+          .map((plan) => plan['name']?.toString() ?? '')
+          .where((name) => name.isNotEmpty && planName != name)
+          .toList();
+    });
+  }
+
+  Future<void> fetchLatLngAndPlanDetails() async {
+    try {
+      final latLng = await api.getProvinceLatLng(widget.plan.province);
+      centerLatLng = latLng;
+
+      if (_planId == 0) {
+        planName = widget.plan.name;
+        budget = widget.plan.budget;
+        spending = widget.plan.spending;
+        favoritePlaces = widget.plan.favoritePlaces;
+        otherExpenses = widget.plan.otherExpenses;
+        placesByDay = widget.plan.placesByDay;
+
+        final start = widget.plan.dateRange.start;
+        final end = widget.plan.dateRange.end;
+        final dayCount = end.difference(start).inDays + 1;
+        for (int i = 0; i < dayCount; i++) {
+          dayColors[i] = Colors.orange;
+        }
+        setState(() {});
+        return;
+      }
+
+      final planData = await api.getPlanDetails(_planId);
+      planName = planData['name'];
+      _planNameController.text = planData['name'];
+      budget = (planData['budget'] as num).toDouble();
+      spending = (planData['spending'] as num).toDouble();
+      favoritePlaces =
+          List<Map<String, dynamic>>.from(planData['favoritePlaces']);
+      otherExpenses =
+          List<Map<String, dynamic>>.from(planData['otherExpenses']);
+      placesByDay = Map<int, List<Map<String, dynamic>>>.from(
+        (planData['placesByDay'] as Map).map(
+          (key, value) => MapEntry(
+            int.parse(key.toString()),
+            List<Map<String, dynamic>>.from(value),
+          ),
+        ),
+      );
+      if (planData['dayColors'] != null) {
+        dayColors = (planData['dayColors'] as Map).map(
+          (key, value) => MapEntry(int.parse(key.toString()), Color(value)),
+        );
+      } else {
+        final start = widget.plan.dateRange.start;
+        final end = widget.plan.dateRange.end;
+        final dayCount = end.difference(start).inDays + 1;
+        for (int i = 0; i < dayCount; i++) {
+          dayColors[i] = Colors.orange;
+        }
+      }
+      setState(() {});
+      originalSnapshot = {
+        'planName': planName,
+        'budget': budget,
+        'spending': spending,
+        'favoritePlaces': jsonEncode(favoritePlaces),
+        'otherExpenses': jsonEncode(otherExpenses),
+        'placesByDay': jsonEncode(placesByDay),
+        'dayColors': jsonEncode(
+          dayColors.map((key, value) => MapEntry(key.toString(), value.value)),
+        ),
+      };
+    } catch (e) {
+      debugPrint('[ERROR] fetchLatLngAndPlanDetails: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+      );
     }
+  }
+
+  bool isModified() {
+    if (originalSnapshot == null) return false;
+
+    return originalSnapshot!['planName'] != planName ||
+        originalSnapshot!['budget'] != budget ||
+        originalSnapshot!['spending'] != spending ||
+        originalSnapshot!['favoritePlaces'] != jsonEncode(favoritePlaces) ||
+        originalSnapshot!['otherExpenses'] != jsonEncode(otherExpenses) ||
+        originalSnapshot!['placesByDay'] != jsonEncode(placesByDay) ||
+        originalSnapshot!['dayColors'] !=
+            jsonEncode(
+              dayColors
+                  .map((key, value) => MapEntry(key.toString(), value.value)),
+            );
   }
 
   Widget buildFavoriteTile() {
@@ -122,8 +200,8 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
   }
 
   void _onAddToDay(Map<String, dynamic> place) async {
-    final start = widget.selectedDateRange.start;
-    final end = widget.selectedDateRange.end;
+    final start = widget.plan.dateRange.start;
+    final end = widget.plan.dateRange.end;
     final dayCount = end.difference(start).inDays + 1;
 
     final selectedDay = await showModalBottomSheet<int>(
@@ -142,27 +220,59 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
 
     if (selectedDay != null) {
       setState(() {
+        // ตรวจสอบและสร้างรายการสำหรับวันนั้น ๆ
         placesByDay.putIfAbsent(selectedDay, () => []);
-
-        // 🔸 เพิ่มตรงนี้: ถ้ายังไม่มี ให้เพิ่ม expense = 0.0
         final alreadyAdded =
-            placesByDay[selectedDay]!.any((p) => p['name'] == place['name']);
+            placesByDay[selectedDay]!.any((p) => p['place_id'] == place['id']);
 
         if (!alreadyAdded) {
-          final placeWithExpense = Map<String, dynamic>.from(place);
-          placeWithExpense['expense'] = 0.0;
+          // บันทึก minimal record ลงใน state พร้อมกับชื่อสถานที่
+          final minimalPlaceData = {
+            'place_id': place['id'], // ใช้รหัสสถานที่จาก all_places
+            'place_name': place['name'], // เพิ่มชื่อสถานที่ลงไปด้วย
+            'expense': 0.0,
+            'order_index':
+                placesByDay[selectedDay]!.length, // อ้างอิงตำแหน่งในรายการ
+          };
 
-          placesByDay[selectedDay]!.add(placeWithExpense);
+          placesByDay[selectedDay]!.add(minimalPlaceData);
+
+          // ไม่ต้องเรียก API addPlace ในตอนนี้
+          isSaved = false;
+          debugPrint(
+              '[DEBUG] เพิ่มสถานที่ (แบบ minimal) ลงใน state, isSaved = false');
         }
       });
     }
   }
 
-  void _onItemTapped(int index) {
-    if (index == 0) {
+  Future<void> _tryLeavePage() async {
+    if (!isModified()) {
       Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, '/home');
+      return;
+    }
+
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยังไม่ได้บันทึก'),
+        content:
+            const Text('หากย้อนกลับตอนนี้ ข้อมูลที่ยังไม่ได้เซฟจะหายไปทั้งหมด'),
+        actions: [
+          TextButton(
+            child: const Text('ยกเลิก'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ElevatedButton(
+            child: const Text('ย้อนกลับเลย'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLeave == true) {
+      Navigator.pop(context);
     }
   }
 
@@ -212,8 +322,8 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
   }
 
   List<Widget> buildDayTiles() {
-    final start = widget.selectedDateRange.start;
-    final end = widget.selectedDateRange.end;
+    final start = widget.plan.dateRange.start;
+    final end = widget.plan.dateRange.end;
     final dayCount = end.difference(start).inDays + 1;
 
     return List.generate(dayCount, (index) {
@@ -221,6 +331,8 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
       final thaiWeekday = _thaiWeekday(date.weekday);
 
       final dayPlaces = placesByDay[index] ?? [];
+
+      debugPrint('dayPlaces[$index]: $dayPlaces');
 
       return buildStyledTile(
           key: ValueKey('day-$index'),
@@ -261,17 +373,21 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
                   });
                 },
                 children: List.generate(dayPlaces.length, (i) {
-                  final place = dayPlaces[i];
+                  final place =
+                      dayPlaces[i]; // place คือตัวแปร Map<String, dynamic>
                   return ListTile(
-                    key: ValueKey('$i-${place['name']}'),
+                    key: ValueKey('$i-${place['place_name'] ?? 'unknown'}'),
                     leading: _buildNumberedPin(i + 1, index),
-                    title: Text(place['name']),
+                    title: Text(place['place_name'] ?? 'ไม่ระบุ'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.grey),
                       onPressed: () {
                         setState(() {
                           placesByDay[index]?.removeAt(i);
                           _popupController.hideAllPopups();
+                          isSaved = false;
+                          debugPrint(
+                              '[DEBUG] ลบสถานที่ออกจาก state, isSaved = false');
                         });
                       },
                     ),
@@ -318,9 +434,7 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
       context,
       MaterialPageRoute(
         builder: (context) => EditBudgetPage(
-          initialBudget: budget,
-          placesByDay: placesByDay,
-          initialOtherExpenses: otherExpenses,
+          plan: widget.plan,
           onSave: (newBudget, newSpending, updatedOtherExpenses) {
             Navigator.pop(context, {
               'budget': newBudget,
@@ -338,38 +452,106 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
         spending = result['spending'] ?? spending;
         otherExpenses =
             List<Map<String, dynamic>>.from(result['otherExpenses'] ?? []);
+        isSaved = false;
+        widget.plan.budget = budget;
+        widget.plan.spending = spending;
+        widget.plan.otherExpenses = otherExpenses;
       });
     }
   }
 
-  void savePlan() {
-    if (planName.trim().isEmpty) {
+  void savePlan() async {
+    final currentName = _planNameController.text.trim();
+
+    if (currentName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("กรุณากรอกชื่อแผนก่อนบันทึก")),
       );
       return;
     }
 
-    // แค่แสดงว่าเซฟสำเร็จ
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("แผน '$planName' ถูกบันทึกเรียบร้อยแล้ว!")),
-    );
+    await fetchAllPlanNames(); // โหลดชื่อทั้งหมดอัปเดตล่าสุด
 
-    //เก็บข้อมูลไว้ใช้ภายหลัง
-    // savedPlan = {...};
+    if (_planId == 0 && existingPlanNames.contains(currentName)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text("มีแผนชื่อ '$currentName' อยู่แล้ว กรุณาตั้งชื่อใหม่")),
+      );
+      return;
+    }
+
+    planName = currentName;
+
+    if (_planId == 0) {
+      final createPayload = {
+        'name': planName,
+        'province': widget.plan.province,
+        'start_date': widget.plan.dateRange.start.toIso8601String(),
+        'end_date': widget.plan.dateRange.end.toIso8601String(),
+        'budget': budget,
+        'spending': spending,
+      };
+
+      try {
+        final newId = await ApiService().createPlan(createPayload);
+        setState(() {
+          _planId = newId;
+        });
+        debugPrint('[DEBUG] สร้างแผนใหม่ใน DB แล้ว, ได้ id: $_planId');
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("เกิดข้อผิดพลาดในการสร้างแผน: $e")),
+        );
+        return;
+      }
+    }
+
+    final success = await ApiService().updatePlan(_planId, {
+      'name': planName,
+      'province': widget.plan.province,
+      'start_date': widget.plan.dateRange.start.toIso8601String(),
+      'end_date': widget.plan.dateRange.end.toIso8601String(),
+      'budget': budget,
+      'spending': spending,
+      'dayColors': dayColors,
+      'favoritePlaces': favoritePlaces,
+      'placesByDay': placesByDay,
+      'otherExpenses': otherExpenses
+          .map((e) => {
+                'desc': e['desc'],
+                'amount': e['amount'],
+                'icon_code': (e['icon'] as IconData?)?.codePoint ?? 0,
+              })
+          .toList(),
+    });
+    if (success) {
+      setState(() {
+        isSaved = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("แผน '$planName' ถูกบันทึกเรียบร้อยแล้ว!")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("เกิดข้อผิดพลาดในการบันทึกแผน")),
+      );
+    }
   }
 
   final Map<String, Map<String, dynamic>> _markerKeyToPlace = {};
   List<Marker> _buildAllMarkers() {
     final markers = <Marker>[];
-    _markerKeyToPlace.clear(); // ล้างก่อน
+    _markerKeyToPlace.clear();
 
     placesByDay.forEach((dayIndex, places) {
       for (int i = 0; i < places.length; i++) {
         final place = places[i];
+        debugPrint('[MARKER DEBUG] day $dayIndex, place: $place');
+
         if (place.containsKey('lat') && place.containsKey('lon')) {
-          final keyStr = '$dayIndex-$i'; // ทำให้เป็น key string
-          _markerKeyToPlace[keyStr] = place; // map key → place
+          final keyStr = '$dayIndex-$i';
+          _markerKeyToPlace[keyStr] = place;
 
           final color = dayColors[dayIndex] ?? Colors.orange;
           markers.add(
@@ -396,265 +578,325 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng centerLatLng = getProvinceLatLng(widget.selectedProvince);
+    // กรณีรอโหลดพิกัดจาก API
+    if (centerLatLng == null) {
+      return WillPopScope(
+        onWillPop: () async {
+          await _tryLeavePage(); // แสดง dialog เตือน
+          return false; // บล็อกการย้อนกลับ (ให้ _tryLeavePage จัดการเอง)
+        },
+        child: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FBFD),
-      bottomNavigationBar: CustomBottomNav(
-        currentIndex: _currentIndex,
-        onTap: _onItemTapped,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Stack(
-              children: [
-                FlutterMap(
-                  options: MapOptions(center: centerLatLng, zoom: 13),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.tripplan',
-                    ),
-                    PopupMarkerLayer(
-                      options: PopupMarkerLayerOptions(
-                        markers: _buildAllMarkers(),
-                        popupController: _popupController,
-                        markerTapBehavior: MarkerTapBehavior.togglePopup(),
-                        popupDisplayOptions: PopupDisplayOptions(
-                          builder: (BuildContext context, Marker marker) {
-                            final keyStr =
-                                (marker.key as ValueKey<String>).value;
-                            final place = _markerKeyToPlace[keyStr];
+    // กรณีโหลดเสร็จแล้ว
+    return WillPopScope(
+      onWillPop: () async {
+        debugPrint('[DEBUG] กำลังย้อนกลับ, isSaved = $isSaved');
+        if (isSaved) return true;
 
-                            return Card(
-                              color: const Color(
-                                  0xFFE0F7E9), // ✅ เปลี่ยนสีพื้นหลังตรงนี้
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                child: Text(
-                                  place?['name'] ?? 'ไม่มีชื่อ',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1B9D66), // ✅ สีตัวอักษร
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('ยังไม่ได้บันทึก'),
+            content: const Text(
+                'หากย้อนกลับตอนนี้ ข้อมูลที่ยังไม่ได้เซฟจะหายทั้งหมด'),
+            actions: [
+              TextButton(
+                child: const Text('ยกเลิก'),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              ElevatedButton(
+                child: const Text('ย้อนกลับเลย'),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          ),
+        );
+        return shouldLeave ?? false;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF9FBFD),
+        bottomNavigationBar: CustomBottomNav(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            if (index == 0) {
+              _tryLeavePage();
+            } else if (index == 1) {
+              Navigator.pushReplacementNamed(context, '/home');
+            } else {}
+          },
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              flex: 1,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(center: centerLatLng, zoom: 13),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.tripplan',
+                      ),
+                      PopupMarkerLayer(
+                        options: PopupMarkerLayerOptions(
+                          markers: _buildAllMarkers(),
+                          popupController: _popupController,
+                          markerTapBehavior: MarkerTapBehavior.togglePopup(),
+                          popupDisplayOptions: PopupDisplayOptions(
+                            builder: (BuildContext context, Marker marker) {
+                              final keyStr =
+                                  (marker.key as ValueKey<String>).value;
+                              final place = _markerKeyToPlace[keyStr];
+
+                              return Card(
+                                color: const Color(0xFFE0F7E9),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  child: Text(
+                                    place?['name'] ?? 'ไม่มีชื่อ',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1B9D66),
+                                    ),
                                   ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            final start = widget.plan.dateRange.start;
+                            final end = widget.plan.dateRange.end;
+                            final dayCount = end.difference(start).inDays + 1;
+
+                            for (int i = 0; i < dayCount; i++) {
+                              dayColors.putIfAbsent(
+                                  i, () => Colors.orange); // default
+                            }
+                            final convertedPlacesByDay = placesByDay.map(
+                              (key, value) =>
+                                  MapEntry(int.parse(key.toString()), value),
+                            );
+                            debugPrint(
+                                'ส่ง placesByDay ไปยัง Router: $placesByDay');
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ViewRoutePage(
+                                  placesByDay: convertedPlacesByDay,
+                                  dayColors: dayColors,
                                 ),
                               ),
                             );
                           },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color(0xFF1B9D66), // สีเขียวเข้มแบบละมุน
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            elevation: 3,
+                            shadowColor: const Color.fromARGB(66, 59, 58, 58),
+                          ),
+                          child: const Text(
+                            "ดูเส้นทาง",
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 236, 231, 231),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
+
+                        const SizedBox(width: 8), // ระยะห่างระหว่างปุ่ม
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SearchPlacePage(
+                                  center: centerLatLng!,
+                                  province: widget.plan.province,
+                                  initialFavorites: favoritePlaces,
+                                ),
+                              ),
+                            ).then((result) {
+                              if (result != null &&
+                                  result is List<Map<String, dynamic>>) {
+                                if (hasDataChanged(newFavoritePlaces: result)) {
+                                  setState(() {
+                                    favoritePlaces = result;
+                                    isSaved = false;
+                                    debugPrint(
+                                        '[DEBUG] รายการที่สนใจเปลี่ยนแปลง, isSaved = false');
+                                  });
+                                }
+                              }
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3DEBA1),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                          ),
+                          child: const Text(
+                            "ค้นหาสถานที่",
+                            style: TextStyle(
+                                color: Color(0xFF1B9D66),
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 8)
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _planNameController,
+                      decoration: const InputDecoration(
+                        hintText: "ใส่ชื่อแผนของคุณ...",
+                        border: InputBorder.none,
                       ),
+                      onChanged: (value) {
+                        if (value != planName) {
+                          setState(() {
+                            planName = value;
+                            isSaved = false;
+                            debugPrint(
+                                '[DEBUG] ชื่อแผนเปลี่ยนแปลง, isSaved = false');
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.green,
+                          radius: 16,
+                          child: Icon(Icons.calendar_month,
+                              color: Colors.white, size: 16),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${widget.plan.dateRange.start.day} ${_monthName(widget.plan.dateRange.start.month)} - '
+                          '${widget.plan.dateRange.end.day} ${_monthName(widget.plan.dateRange.end.month)} ${widget.plan.dateRange.end.year + 543}',
+                          style: const TextStyle(color: Colors.green),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          final start = widget.selectedDateRange.start;
-                          final end = widget.selectedDateRange.end;
-                          final dayCount = end.difference(start).inDays + 1;
-
-                          for (int i = 0; i < dayCount; i++) {
-                            dayColors.putIfAbsent(
-                                i, () => Colors.orange); // หรือสี default
-                          }
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ViewRoutePage(
-                                placesByDay: placesByDay,
-                                dayColors: dayColors,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF1B9D66), // สีเขียวเข้มแบบละมุน
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 3,
-                          shadowColor: const Color.fromARGB(66, 59, 58, 58),
-                        ),
-                        child: const Text(
-                          "ดูเส้นทาง",
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 236, 231, 231),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 8), // ระยะห่างระหว่างปุ่ม
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SearchPlacePage(
-                                center: centerLatLng,
-                                province: widget.selectedProvince,
-                                initialFavorites: favoritePlaces,
-                              ),
-                            ),
-                          ).then((result) {
-                            if (result != null &&
-                                result is List<Map<String, dynamic>>) {
-                              setState(() {
-                                favoritePlaces = result;
-                              });
-                            }
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3DEBA1),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                        ),
-                        child: const Text(
-                          "ค้นหาสถานที่",
-                          style: TextStyle(
-                              color: Color(0xFF1B9D66),
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 8)
-                ],
-              ),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _planNameController,
-                    decoration: const InputDecoration(
-                      hintText: "ใส่ชื่อแผนของคุณ...",
-                      border: InputBorder.none,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text("งบของคุณ  ",
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('฿${budget.toStringAsFixed(2)} บาท'),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Text("ใช้จ่าย       ",
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('฿${spending.toStringAsFixed(2)} บาท'),
+                          ],
+                        ),
+                      ],
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        planName = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.green,
-                        radius: 16,
-                        child: Icon(Icons.calendar_month,
-                            color: Colors.white, size: 16),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${widget.selectedDateRange.start.day} ${_monthName(widget.selectedDateRange.start.month)} - '
-                        '${widget.selectedDateRange.end.day} ${_monthName(widget.selectedDateRange.end.month)} ${widget.selectedDateRange.end.year + 543}',
-                        style: const TextStyle(color: Colors.green),
-                      ),
-                    ],
-                  ),
-                ],
+                    InkWell(
+                      onTap: _navigateToEditBudget,
+                      child: const Icon(Icons.edit,
+                          size: 20, color: Color(0xFF1B9D66)),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Expanded(
+              flex: 2,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text("งบของคุณ  ",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('฿${budget.toStringAsFixed(2)} บาท'),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Text("ใช้จ่าย       ",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('฿${spending.toStringAsFixed(2)} บาท'),
-                        ],
-                      ),
-                    ],
-                  ),
-                  InkWell(
-                    onTap: _navigateToEditBudget,
-                    child: const Icon(Icons.edit,
-                        size: 20, color: Color(0xFF1B9D66)),
-                  ),
+                  buildFavoriteTile(),
+                  ...buildDayTiles(),
                 ],
               ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                buildFavoriteTile(),
-                ...buildDayTiles(),
-              ],
+          ],
+        ),
+        bottomSheet: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          color: Colors.white,
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: savePlan,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B9D66),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
-          ),
-        ],
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        color: Colors.white,
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: savePlan,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1B9D66),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          ),
-          child: const Text(
-            'บันทึกแผนเที่ยว',
-            style: TextStyle(fontSize: 16, color: Colors.white),
+            child: const Text(
+              'บันทึกแผนเที่ยว',
+              style: TextStyle(fontSize: 16, color: Colors.white),
+            ),
           ),
         ),
       ),
@@ -665,19 +907,6 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
   void dispose() {
     _planNameController.dispose();
     super.dispose();
-  }
-
-  Widget _colorOption(Color color, int dayIndex) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context, color),
-      child: CircleAvatar(
-        backgroundColor: color,
-        radius: 18,
-        child: dayColors[dayIndex] == color
-            ? const Icon(Icons.check, color: Colors.white)
-            : null,
-      ),
-    );
   }
 
   void _pickColorForDay(int dayIndex) async {
@@ -716,32 +945,5 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
         );
       },
     );
-  }
-}
-
-class TravelPlan {
-  final String name;
-  final String province;
-  final DateTimeRange dateRange;
-  final double budget;
-  final double spending;
-
-  TravelPlan({
-    required this.name,
-    required this.province,
-    required this.dateRange,
-    required this.budget,
-    required this.spending,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'province': province,
-      'startDate': dateRange.start.toIso8601String(),
-      'endDate': dateRange.end.toIso8601String(),
-      'budget': budget,
-      'spending': spending,
-    };
   }
 }
