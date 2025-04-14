@@ -27,12 +27,12 @@ class _TripTypePageState extends State<TripTypePage>
   Map<int, String> selectedTypes = {}; // วัน -> ประเภท
 
   final List<String> tripTypes = [
-    "ผจญภัย",
-    "คาเฟ่ & ช็อปปิ้ง",
-    "ธรรมชาติ & ชมวิว",
-    "วัฒนธรรม & ประวัติศาสตร์",
-    "ครอบครัว & ทำบุญ",
-    "ปาร์ตี้ & สายกลางคืน"
+    "สายผจญภัย",
+    "สายคาเฟ่",
+    "สายธรรมชาติ",
+    "สายประวัติศาสตร์",
+    "สายทำบุญ & ครอบครัว",
+    "สายกลางคืน"
   ];
 
   List<DateTime> getTripDates() {
@@ -52,15 +52,16 @@ class _TripTypePageState extends State<TripTypePage>
 
   void goNextPage() {
     if (selectedTypes.length == _tabController.length) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ShakeFortunePage(
-            province: widget.province,
-            dateRange: widget.dateRange,
-          ),
-        ),
-      );
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => ShakeFortunePage(
+      province: widget.province,
+      dateRange: widget.dateRange,
+      selectedCategoriesByDay: selectedTypes, // ✅ ส่งทั้ง map
+    ),
+  ),
+);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("กรุณาเลือกประเภทให้ครบทุกวัน")),
@@ -78,10 +79,9 @@ class _TripTypePageState extends State<TripTypePage>
       onTap: (index) {
         if (index == 0) {
           if (Navigator.canPop(context)) {
-            Navigator.pop(context); // ถ้าสามารถย้อนกลับได้
+            Navigator.pop(context);
           } else {
-            Navigator.pushReplacementNamed(
-                context, '/home'); // ไปหน้า home ถ้าไม่สามารถย้อนกลับได้
+            Navigator.pushReplacementNamed(context, '/home');
           }
         } else {
           Navigator.pushReplacementNamed(context, '/home');

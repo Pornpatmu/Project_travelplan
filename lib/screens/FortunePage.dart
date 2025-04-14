@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-
 import '../widgets/main_layout.dart';
 import '../widgets/custom_app_bar.dart';
+import 'TripTypePage.dart';
+import '../services/api.dart'; // Import ApiService
 
 class FortunePage extends StatefulWidget {
   const FortunePage({super.key});
@@ -16,12 +17,7 @@ class _FortunePageState extends State<FortunePage> {
   DateTimeRange? selectedDateRange;
   String? fortuneResult;
 
-  final List<String> provinces = [
-    'ขอนแก่น',
-    'บุรีรัมย์',
-    'สุรินทร์',
-    'อุดรธานี'
-  ];
+  List<String> provinces = []; // รายการจังหวัดที่ได้จาก API
 
   final List<String> fortunes = [
     "วันนี้คุณจะพบสิ่งที่ไม่คาดฝัน",
@@ -31,12 +27,35 @@ class _FortunePageState extends State<FortunePage> {
     "โอกาสใหม่กำลังรออยู่ข้างหน้า",
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    fetchProvinces(); // ดึงข้อมูลจังหวัดจาก API เมื่อเริ่มหน้า
+  }
+
+  // ฟังก์ชันดึงข้อมูลจังหวัดจาก API
+  Future<void> fetchProvinces() async {
+    try {
+      ApiService apiService = ApiService();
+      final List<String> fetchedProvinces = await apiService.getProvinces();
+      setState(() {
+        provinces = fetchedProvinces;
+      });
+    } catch (e) {
+      print("Error fetching provinces: $e");
+    }
+  }
+
   Future<void> pickDateRange() async {
+    final DateTime now = DateTime.now();
+
     final DateTimeRange? result = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2026),
+      firstDate: now, // วันที่เริ่มต้นเป็นวันที่ปัจจุบัน
+      lastDate: DateTime(2026), // สามารถเลือกวันที่ในอนาคตได้ถึงปี 2026
+      initialDateRange: selectedDateRange, // ขอบเขตที่เลือกไว้ก่อนหน้านี้
     );
+
     if (result != null) {
       setState(() => selectedDateRange = result);
     }
@@ -66,6 +85,19 @@ class _FortunePageState extends State<FortunePage> {
 
     final result = fortunes[Random().nextInt(fortunes.length)];
     setState(() => fortuneResult = result);
+
+    // นำทางไปหน้า TripTypePage พร้อมส่งข้อมูลที่เลือก
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TripTypePage(
+          dateRange: selectedDateRange!,
+          province: selectedProvince!,
+          fortune: result,
+          companion: 'เพื่อนเดินทาง', // สามารถส่งข้อมูลอื่น ๆ เช่น ข้อมูลเพื่อนที่เดินทางได้
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,40 +134,42 @@ class _FortunePageState extends State<FortunePage> {
               ),
               const SizedBox(height: 24),
 
-              // จังหวัด
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    hint: const Text("จังหวัดที่จะไป?"),
-                    value: selectedProvince,
-                    items: provinces
-                        .map((prov) => DropdownMenuItem(
-                              value: prov,
-                              child: Text(prov),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => selectedProvince = value);
-                    },
-                  ),
-                ),
-              ),
+              // จังหวัด (Dropdown ที่ดึงข้อมูลจาก API)
+              provinces.isEmpty
+                  ? const CircularProgressIndicator() // แสดง loader เมื่อข้อมูลยังไม่มา
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: const Text("จังหวัดที่จะไป?"),
+                          value: selectedProvince,
+                          items: provinces
+                              .map((prov) => DropdownMenuItem(
+                                    value: prov,
+                                    child: Text(prov),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => selectedProvince = value);
+                          },
+                        ),
+                      ),
+                    ),
 
               // วันที่
               InkWell(
                 onTap: pickDateRange,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   margin: const EdgeInsets.only(bottom: 32),
                   decoration: BoxDecoration(
                     color: Colors.white,

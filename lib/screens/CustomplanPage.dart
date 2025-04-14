@@ -36,15 +36,15 @@ class _CustomplanPageState extends State<CustomplanPage> {
   }
 
   Future<void> pickDateRange() async {
-    final DateTimeRange? result = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2026),
-    );
-    if (result != null) {
-      setState(() => selectedDateRange = result);
-    }
+  final DateTimeRange? result = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime.now(), // ห้ามเลือกวันย้อนหลัง
+    lastDate: DateTime(2026),
+  );
+  if (result != null) {
+    setState(() => selectedDateRange = result);
   }
+}
 
   void startPlanning() async {
     if (selectedProvince == null || selectedDateRange == null) {

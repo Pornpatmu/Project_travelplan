@@ -34,8 +34,10 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
   }
 
   Future<void> fetchPlaces() async {
-    final url = Uri.parse(
-        'http://10.0.2.2:3000/places?province=${Uri.encodeComponent(widget.province)}');
+    // final url = Uri.parse(
+    //     'http://10.0.2.2:3000/places?province=${Uri.encodeComponent(widget.province)}');
+    final url = Uri.parse('http://localhost:3000/places?province=${Uri.encodeComponent(widget.province)}');
+
     final res = await http.get(url);
 
     if (res.statusCode == 200) {

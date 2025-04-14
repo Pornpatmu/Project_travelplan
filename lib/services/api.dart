@@ -6,8 +6,9 @@ import '../models/travel_plan.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000';
+  //static const String baseUrl = 'http://localhost:3000';
 
-  // ดึงรายชื่อจังหวัดทั้งหมด
+  // ✅ ดึงรายชื่อจังหวัดทั้งหมด
   Future<List<String>> getProvinces() async {
     final res = await http.get(Uri.parse('$baseUrl/provinces'));
     if (res.statusCode == 200) {
@@ -17,7 +18,7 @@ class ApiService {
     }
   }
 
-  // ดึงข้อมูลแผนเที่ยวทั้งหมด
+  // ✅ ดึงข้อมูลแผนเที่ยวทั้งหมด
   Future<List<Map<String, dynamic>>> getAllPlans() async {
     final res = await http.get(Uri.parse('$baseUrl/plans'));
     if (res.statusCode == 200) {
@@ -27,7 +28,7 @@ class ApiService {
     }
   }
 
-  // สร้างแผนเที่ยวใหม่
+  // ✅ สร้างแผนเที่ยวใหม่
   Future<int> createPlan(Map<String, dynamic> plan) async {
     final res = await http.post(
       Uri.parse('$baseUrl/plans'),
@@ -38,13 +39,12 @@ class ApiService {
     if (res.statusCode == 201 || res.statusCode == 200) {
       return json.decode(res.body)['id'];
     } else {
-      // อ่าน error message จาก response
       final errorData = json.decode(res.body);
       throw Exception(errorData['error'] ?? 'Failed to create plan');
     }
   }
 
-  // เพิ่มสถานที่ในแผนเที่ยว
+  // ✅ เพิ่มสถานที่ในแผนเที่ยว
   Future<void> addPlace(Map<String, dynamic> place) async {
     final res = await http.post(
       Uri.parse('$baseUrl/places'),
@@ -57,7 +57,7 @@ class ApiService {
     }
   }
 
-  // เพิ่มสถานที่ในรายการที่สนใจ
+  // ✅ เพิ่มสถานที่ในรายการที่สนใจ
   Future<void> addFavorite(Map<String, dynamic> place) async {
     final res = await http.post(
       Uri.parse('$baseUrl/favorites'),
@@ -70,7 +70,7 @@ class ApiService {
     }
   }
 
-  // เพิ่มค่าใช้จ่ายอื่นๆ
+  // ✅ เพิ่มค่าใช้จ่ายอื่นๆ
   Future<void> addExpense(Map<String, dynamic> expense) async {
     final res = await http.post(
       Uri.parse('$baseUrl/expenses'),
@@ -83,8 +83,9 @@ class ApiService {
     }
   }
 
+  // ✅ ดึงรายละเอียดแผน
   Future<Map<String, dynamic>> getPlanDetails(int planId) async {
-    final url = Uri.parse('http://10.0.2.2:3000/plans/$planId');
+    final url = Uri.parse('$baseUrl/plans/$planId');
     debugPrint('เรียกดูแผน id: $planId ที่ $url');
 
     final response = await http.get(url);
@@ -99,7 +100,7 @@ class ApiService {
     }
   }
 
-  // ลบสถานที่ออกจากแผน
+  // ✅ ลบสถานที่
   Future<void> deletePlace(int placeId) async {
     final res = await http.delete(Uri.parse('$baseUrl/places/$placeId'));
     if (res.statusCode != 200) {
@@ -107,7 +108,7 @@ class ApiService {
     }
   }
 
-// อัปเดตงบประมาณและใช้จ่ายในแผนโดยใช้ TravelPlan class
+  // ✅ อัปเดตงบประมาณ
   Future<void> updatePlanBudget(
     TravelPlan plan,
     double spending,
@@ -140,49 +141,34 @@ class ApiService {
     }
   }
 
-  // อัปเดตแผนเที่ยวทั้งชุด (ชื่อแผน + ข้อมูลทั้งหมด)
+  // ✅ อัปเดตแผนทั้งชุด
   Future<bool> updatePlan(int planId, Map<String, dynamic> data) async {
     try {
       final encodedData = {
         ...data,
-
-        // ✅ แปลง key ของ dayColors เป็น String
         'dayColors': (data['dayColors'] as Map).map(
-          (key, value) => MapEntry(key.toString(), (value as Color).value),
+          (key, value) => MapEntry(key.toString(), value is Color ? value.value : 0),
         ),
-
-        // ✅ แปลง placesByDay
-        'placesByDay':
-            (data['placesByDay'] as Map).map((key, value) => MapEntry(
-                  key.toString(),
-                  (value as List)
-                      .map((p) => {
-                            'place_id': p['place_id'],
-                            'expense': p['expense'],
-                            'order_index': p['order_index'],
-                            'category': p['category'],
-                          })
-                      .toList(),
-                )),
-
-        // ✅ แปลง favoritePlaces
-        'favoritePlaces': (data['favoritePlaces'] as List)
-            .map((f) => {
-                  'name': f['name'],
-                  'lat': f['lat'],
-                  'lon': f['lon'],
-                  'category': f['category'],
-                })
-            .toList(),
-
-        // ✅ แปลง otherExpenses (เอาเฉพาะ icon_code)
-        'otherExpenses': (data['otherExpenses'] as List)
-            .map((e) => {
-                  'desc': e['desc'],
-                  'amount': e['amount'],
-                  'icon_code': (e['icon'] as IconData?)?.codePoint ?? 0,
-                })
-            .toList(),
+        'placesByDay': (data['placesByDay'] as Map).map((key, value) => MapEntry(
+              key.toString(),
+              (value as List).map((p) => {
+                    'place_id': p['place_id'],
+                    'expense': p['expense'],
+                    'order_index': p['order_index'],
+                    'category': p['category'],
+                  }).toList(),
+            )),
+        'favoritePlaces': (data['favoritePlaces'] as List).map((f) => {
+              'name': f['name'],
+              'lat': f['lat'],
+              'lon': f['lon'],
+              'category': f['category'],
+            }).toList(),
+        'otherExpenses': (data['otherExpenses'] as List).map((e) => {
+              'desc': e['desc'],
+              'amount': e['amount'],
+              'icon_code': (e['icon'] as IconData?)?.codePoint ?? 0,
+            }).toList(),
       };
 
       final res = await http.put(
@@ -200,10 +186,10 @@ class ApiService {
     }
   }
 
-  //ข้อมูลจังหวัด + พิกัด
+  // ✅ ดึงพิกัดจังหวัด
   Future<LatLng> getProvinceLatLng(String name) async {
-    final response = await http
-        .get(Uri.parse('http://10.0.2.2:3000/province/location?name=$name'));
+    final encodedName = Uri.encodeComponent(name);
+    final response = await http.get(Uri.parse('$baseUrl/province/location?name=$encodedName'));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -213,6 +199,7 @@ class ApiService {
     }
   }
 
+  // ✅ ดึงสถานที่รายตัว
   Future<Map<String, dynamic>> getPlaceById(int placeId) async {
     final res = await http.get(Uri.parse('$baseUrl/places/$placeId'));
     if (res.statusCode == 200) {
@@ -222,10 +209,41 @@ class ApiService {
     }
   }
 
+  // ✅ ลบแผน
   Future<void> deletePlan(int id) async {
     final res = await http.delete(Uri.parse('$baseUrl/plans/$id'));
     if (res.statusCode != 200) {
       throw Exception('ลบแผนไม่สำเร็จ');
+    }
+  }
+
+  // ✅ ดึงสถานที่แบบสุ่ม
+  Future<List<Map<String, dynamic>>> getRandomNearbyPlaces(
+      String province, String category) async {
+    try {
+      final encodedProvince = Uri.encodeComponent(province);
+      final encodedCategory = Uri.encodeComponent(category);
+
+      final res = await http.get(Uri.parse(
+          '$baseUrl/places/random?province=$encodedProvince&category=$encodedCategory'));
+
+      if (res.statusCode == 200) {
+        List<Map<String, dynamic>> places =
+            List<Map<String, dynamic>>.from(json.decode(res.body));
+
+        if (places.isNotEmpty) {
+          places.shuffle();
+          return places.take(3).toList();
+        } else {
+          throw Exception('ไม่พบสถานที่ในจังหวัดนี้');
+        }
+      } else {
+        throw Exception('ไม่สามารถดึงข้อมูลสถานที่ได้: ${res.body}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching random places: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลสถานที่ได้');
+      
     }
   }
 }

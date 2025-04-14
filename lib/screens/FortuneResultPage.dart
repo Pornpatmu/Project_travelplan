@@ -1,30 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:tripplan_1/screens/FortuneSummaryPage.dart';
-import 'package:tripplan_1/widgets/main_layout.dart';  // นำเข้า MainLayout
-import 'package:tripplan_1/widgets/custom_app_bar.dart';  // นำเข้า CustomAppBar
+import 'package:tripplan_1/widgets/main_layout.dart'; // นำเข้า MainLayout
+import 'package:tripplan_1/widgets/custom_app_bar.dart'; // นำเข้า CustomAppBar
 
 class FortuneResultPage extends StatelessWidget {
   final String province;
   final DateTimeRange dateRange;
-  final String fortune;
+  // final String fortune;
+  // final List<Map<String, dynamic>> places; //  รับสถานที่ที่สุ่มมาจาก ShakePage
+  final Map<int, String> allFortunesByDay;
+  final Map<int, List<Map<String, dynamic>>> allPlacesByDay;
 
   const FortuneResultPage({
     super.key,
     required this.province,
     required this.dateRange,
-    required this.fortune,
+    // required this.fortune,
+    // required this.places,
+    required this.allFortunesByDay,
+    required this.allPlacesByDay,
   });
 
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      appBar: const CustomAppBar(),  // ใช้ CustomAppBar
+      appBar: const CustomAppBar(),
       currentIndex: 0,
       onTap: (index) {
         if (index == 0) {
-          Navigator.pop(context);  // ไปหน้าก่อนหน้า
+          Navigator.pop(context);
         } else if (index == 1) {
-          Navigator.pushReplacementNamed(context, '/home');  // ไปหน้า home
+          Navigator.pushReplacementNamed(context, '/home');
         }
       },
       body: Center(
@@ -55,7 +61,10 @@ class FortuneResultPage extends StatelessWidget {
                       builder: (_) => FortuneSummaryPage(
                         province: province,
                         dateRange: dateRange,
-                        fortune: fortune,
+                        allFortunesByDay: allFortunesByDay,
+                        allPlacesByDay: allPlacesByDay,
+                        // fortune: fortune,
+                        // places: places,
                       ),
                     ),
                   );

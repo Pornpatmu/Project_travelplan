@@ -1,76 +1,72 @@
 import 'package:flutter/material.dart';
-import 'package:tripplan_1/widgets/main_layout.dart';  // นำเข้า MainLayout
-import 'package:tripplan_1/widgets/custom_app_bar.dart';  // นำเข้า CustomAppBar
-
-class FortuneSummaryPage extends StatelessWidget {
+import 'package:tripplan_1/widgets/main_layout.dart'; // นำเข้า MainLayout
+import 'package:tripplan_1/widgets/custom_app_bar.dart'; // นำเข้า CustomAppBar
+import 'package:tripplan_1/services/api.dart'; // นำเข้า ApiService สำหรับดึงข้อมูล
+import 'PlaceDetailPage.dart';
+class FortuneSummaryPage extends StatefulWidget {
   final DateTimeRange dateRange;
   final String province;
-  final String fortune;
+  final Map<int, String> allFortunesByDay;
+  final Map<int, List<Map<String, dynamic>>> allPlacesByDay;
+  // final String fortune;
+  // final List<Map<String, dynamic>> places;
 
   const FortuneSummaryPage({
     super.key,
     required this.dateRange,
     required this.province,
-    required this.fortune,
+    required this.allFortunesByDay,
+    required this.allPlacesByDay,
+    // required this.fortune,
+    // required this.places,
   });
 
-  List<DateTime> getTripDates() {
-    final days = dateRange.end.difference(dateRange.start).inDays + 1;
-    return List.generate(
-      days,
-      (i) => dateRange.start.add(Duration(days: i)),
-    );
-  }
-
-  String getThaiDay(DateTime date) {
-    const days = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
-    return days[date.weekday % 7];
-  }
-
+  @override
+  _FortuneSummaryPageState createState() => _FortuneSummaryPageState();
+}
+class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
   @override
   Widget build(BuildContext context) {
     final tripDates = getTripDates();
 
     return MainLayout(
-      appBar: const CustomAppBar(),  // ใช้ CustomAppBar
+      appBar: const CustomAppBar(),
       currentIndex: 0,
       onTap: (index) {
         if (index == 0) {
-          Navigator.pop(context);  // ถ้าสามารถย้อนกลับได้
+          Navigator.pop(context);
         } else if (index == 1) {
-          Navigator.pushReplacementNamed(context, '/home');  // ไปหน้า home
+          Navigator.pushReplacementNamed(context, '/home');
         }
       },
       body: DefaultTabController(
         length: tripDates.length,
         child: Scaffold(
           appBar: AppBar(
-            backgroundColor: const Color.fromARGB(255, 255, 255, 255),        
-            foregroundColor: const Color.fromARGB(255, 0, 0, 0),         
-            centerTitle: true,                     // ทำให้หัวข้ออยู่ตรงกลาง
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            centerTitle: true,
             title: const Text("เสี่ยงดวง✨"),
             bottom: TabBar(
-              indicatorColor: Colors.purple,       // กำหนดสีของ indicator
-              labelColor: Colors.white,            // สีของข้อความใน Tab ให้เป็นสีขาว
-              unselectedLabelColor: Colors.white,  // สีของข้อความที่ไม่ถูกเลือก
+              indicatorColor: Colors.purple,
               isScrollable: true,
-              tabs: tripDates.asMap().entries.map((entry) {
-                final index = entry.key;
-                final date = entry.value;
+              tabs: tripDates.map((date) {
                 return Tab(
-                   child: Text(
+                  child: Text(
                     "${date.day} ${_monthShort(date.month)} (${getThaiDay(date)})",
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black, // ⭐ เปลี่ยนสีตัวอักษรเป็นสีดำ
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                   ),
                 );
               }).toList(),
             ),
           ),
           body: TabBarView(
-            children: tripDates.map((date) {
+            children: tripDates.asMap().entries.map((entry) {
+              final index = entry.key;
+              final date = entry.value;
+              final places = widget.allPlacesByDay[index] ?? [];
+              final fortune = widget.allFortunesByDay[index] ?? 'ไม่พบดวง';
+
               return Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Container(
@@ -83,10 +79,8 @@ class FortuneSummaryPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        "📍 จังหวัด: $province",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      Text("📍 จังหวัด: ${widget.province}",
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Text("🔮 ดวงของคุณ: $fortune"),
                       const SizedBox(height: 24),
@@ -101,41 +95,39 @@ class FortuneSummaryPage extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.purple,
-                          child: Text('1', style: TextStyle(color: Colors.white)),
-                        ),
-                        title: Text("วัดหนองแวง พระอารามหลวง"),
-                      ),
-                      const ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.purple,
-                          child: Text('2', style: TextStyle(color: Colors.white)),
-                        ),
-                        title: Text("พิพิธภัณฑสถานแห่งชาติ ขอนแก่น"),
-                      ),
-                      const SizedBox(height: 24),
-                      TextButton(
-                        onPressed: () {
-                          // TODO: ไปยังหน้าที่พัก
-                        },
-                        child: const Text("ดูที่พักที่แนะนำ"),
-                      ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context); // กลับไปเขย่าใหม่
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: places.length,
+                          itemBuilder: (context, idx) {
+                            final place = places[idx];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.purple,
+                                child: Text(
+                                  '${idx + 1}',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              title: Text(place['name'] ?? 'ไม่พบชื่อ'),
+                              subtitle: GestureDetector(
+                                child: Text(
+                                  "รายละเอียด",
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PlaceDetailPage(place: place),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purple[100],
-                            foregroundColor: Colors.deepPurple,
-                            shape: const StadiumBorder(),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32, vertical: 12),
-                          ),
-                          child: const Text("เขย่าเซียมซีรอบใหม่!"),
                         ),
                       ),
                     ],
@@ -149,22 +141,24 @@ class FortuneSummaryPage extends StatelessWidget {
     );
   }
 
+  List<DateTime> getTripDates() {
+    final days = widget.dateRange.end.difference(widget.dateRange.start).inDays + 1;
+    return List.generate(
+      days,
+      (i) => widget.dateRange.start.add(Duration(days: i)),
+    );
+  }
+
   String _monthShort(int month) {
     const months = [
-      '',
-      'ม.ค.',
-      'ก.พ.',
-      'มี.ค.',
-      'เม.ย.',
-      'พ.ค.',
-      'มิ.ย.',
-      'ก.ค.',
-      'ส.ค.',
-      'ก.ย.',
-      'ต.ค.',
-      'พ.ย.',
-      'ธ.ค.'
+      '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
     ];
     return months[month];
+  }
+
+  String getThaiDay(DateTime date) {
+    const days = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+    return days[date.weekday % 7];
   }
 }
