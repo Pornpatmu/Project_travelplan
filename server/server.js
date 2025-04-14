@@ -74,7 +74,11 @@ db.run(`
     province TEXT,
     image TEXT,
     openingDays TEXT,
-    phone TEXT
+    phone TEXT,
+    description TEXT,
+    address TEXT,
+    hours TEXT,
+    mapUrl TEXT
   )
 `);
 
