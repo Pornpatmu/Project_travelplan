@@ -4,6 +4,8 @@ import '../widgets/custom_app_bar.dart';
 import '../services/api.dart';
 import 'PlanDetailPage.dart';
 import '../models/travel_plan.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
 
 class CustomplanPage extends StatefulWidget {
   const CustomplanPage({super.key});
@@ -15,7 +17,8 @@ class CustomplanPage extends StatefulWidget {
 class _CustomplanPageState extends State<CustomplanPage> {
   String? selectedProvince;
   DateTimeRange? selectedDateRange;
-
+  FocusNode dropdownFocusNode = FocusNode();
+  bool isDropdownOpen = false;
   List<String> provinces = [];
   bool isLoading = true;
 
@@ -23,6 +26,47 @@ class _CustomplanPageState extends State<CustomplanPage> {
   void initState() {
     super.initState();
     fetchProvinces();
+
+    dropdownFocusNode.addListener(() {
+      setState(() {
+        isDropdownOpen = dropdownFocusNode.hasFocus;
+      });
+    });
+  }
+
+  Future<void> pickDateRange() async {
+    final DateTimeRange? result = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2026),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData(
+            useMaterial3: false, // ปิด Material 3
+            primaryColor: const Color(0xFF11AF6D),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF11AF6D), // ปุ่ม + ขอบ
+              onPrimary: Colors.white, // ตัวอักษรบนปุ่ม
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textTheme: const TextTheme(
+              bodyMedium: TextStyle(fontSize: 14), // ปรับขนาดเลขในช่อง
+            ),
+            dialogTheme: DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() => selectedDateRange = result);
+    }
   }
 
   Future<void> fetchProvinces() async {
@@ -34,17 +78,6 @@ class _CustomplanPageState extends State<CustomplanPage> {
       setState(() => isLoading = false);
     }
   }
-
-  Future<void> pickDateRange() async {
-  final DateTimeRange? result = await showDateRangePicker(
-    context: context,
-    firstDate: DateTime.now(), // ห้ามเลือกวันย้อนหลัง
-    lastDate: DateTime(2026),
-  );
-  if (result != null) {
-    setState(() => selectedDateRange = result);
-  }
-}
 
   void startPlanning() async {
     if (selectedProvince == null || selectedDateRange == null) {
@@ -78,15 +111,15 @@ class _CustomplanPageState extends State<CustomplanPage> {
       appBar: const CustomAppBar(),
       currentIndex: 2,
       onTap: (index) {
-        switch (index) {
-          case 0:
-            Navigator.pushReplacementNamed(context, '/home'); // หน้า Home
-            break;
-          case 1:
-            Navigator.pushReplacementNamed(context, '/fortune'); // หน้า Fortune
-            break;
-          case 2:
-            break;
+        if (index == 0) {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context); // 🔙 ย้อนกลับ
+          } else {
+            Navigator.pushReplacementNamed(
+                context, '/home'); // fallback ไปหน้า home
+          }
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
         }
       },
       body: Container(
@@ -105,32 +138,58 @@ class _CustomplanPageState extends State<CustomplanPage> {
 
               // จังหวัด
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          hint: const Text("จังหวัดที่จะไป?"),
-                          value: selectedProvince,
-                          items: provinces
-                              .map((prov) => DropdownMenuItem(
-                                    value: prov,
-                                    child: Text(prov),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() => selectedProvince = value);
-                          },
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton2<String>(
+                    focusNode: dropdownFocusNode,
+                    isExpanded: true,
+                    hint: const Text("จังหวัดที่จะไป?"),
+                    value: selectedProvince,
+                    items: provinces
+                        .map((prov) => DropdownMenuItem(
+                              value: prov,
+                              child: Text(prov),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => selectedProvince = value);
+                    },
+                    buttonStyleData: ButtonStyleData(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDropdownOpen
+                              ? const Color(0xFF11AF6D)
+                              : Colors.grey.shade300,
+                          width: 1.5,
                         ),
+                        boxShadow: isDropdownOpen
+                            ? [
+                                BoxShadow(
+                                  color: Colors.greenAccent.withOpacity(0.4),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ]
+                            : [],
                       ),
+                    ),
+                    dropdownStyleData: DropdownStyleData(
+                      maxHeight: 250, // 🟢 ปรับความสูง dropdown
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      scrollbarTheme: ScrollbarThemeData(
+                        radius: const Radius.circular(8),
+                        thickness: WidgetStateProperty.all(6),
+                        thumbColor:
+                            WidgetStateProperty.all(const Color(0xFF11AF6D)),
+                      ),
+                    ),
+                  ),
+                ),
               ),
 
               // วันที่

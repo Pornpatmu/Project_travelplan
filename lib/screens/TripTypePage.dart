@@ -52,16 +52,16 @@ class _TripTypePageState extends State<TripTypePage>
 
   void goNextPage() {
     if (selectedTypes.length == _tabController.length) {
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => ShakeFortunePage(
-      province: widget.province,
-      dateRange: widget.dateRange,
-      selectedCategoriesByDay: selectedTypes, // ✅ ส่งทั้ง map
-    ),
-  ),
-);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ShakeFortunePage(
+            province: widget.province,
+            dateRange: widget.dateRange,
+            selectedCategoriesByDay: selectedTypes,
+          ),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("กรุณาเลือกประเภทให้ครบทุกวัน")),
@@ -139,7 +139,7 @@ Navigator.push(
                 child: Column(
                   children: [
                     // ใส่ title ที่ด้านบนของกรอบ
-                    Text(
+                    const Text(
                       "เลือกประเภทการเที่ยวของคุณ", // ข้อความที่คุณต้องการ
                       style: TextStyle(
                         fontSize: 18, // ขนาดตัวอักษร

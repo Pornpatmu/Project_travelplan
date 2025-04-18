@@ -3,7 +3,8 @@ import 'dart:math';
 import '../widgets/main_layout.dart';
 import '../widgets/custom_app_bar.dart';
 import 'TripTypePage.dart';
-import '../services/api.dart'; // Import ApiService
+import '../services/api.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class FortunePage extends StatefulWidget {
   const FortunePage({super.key});
@@ -16,8 +17,10 @@ class _FortunePageState extends State<FortunePage> {
   String? selectedProvince;
   DateTimeRange? selectedDateRange;
   String? fortuneResult;
+  FocusNode dropdownFocusNode = FocusNode();
+  bool isDropdownOpen = false;
 
-  List<String> provinces = []; // รายการจังหวัดที่ได้จาก API
+  List<String> provinces = [];
 
   final List<String> fortunes = [
     "วันนี้คุณจะพบสิ่งที่ไม่คาดฝัน",
@@ -30,10 +33,12 @@ class _FortunePageState extends State<FortunePage> {
   @override
   void initState() {
     super.initState();
-    fetchProvinces(); // ดึงข้อมูลจังหวัดจาก API เมื่อเริ่มหน้า
+    fetchProvinces();
+    dropdownFocusNode.addListener(() {
+      setState(() => isDropdownOpen = dropdownFocusNode.hasFocus);
+    });
   }
 
-  // ฟังก์ชันดึงข้อมูลจังหวัดจาก API
   Future<void> fetchProvinces() async {
     try {
       ApiService apiService = ApiService();
@@ -48,14 +53,33 @@ class _FortunePageState extends State<FortunePage> {
 
   Future<void> pickDateRange() async {
     final DateTime now = DateTime.now();
-
     final DateTimeRange? result = await showDateRangePicker(
       context: context,
-      firstDate: now, // วันที่เริ่มต้นเป็นวันที่ปัจจุบัน
-      lastDate: DateTime(2026), // สามารถเลือกวันที่ในอนาคตได้ถึงปี 2026
-      initialDateRange: selectedDateRange, // ขอบเขตที่เลือกไว้ก่อนหน้านี้
+      firstDate: now,
+      lastDate: DateTime(2026),
+      initialDateRange: selectedDateRange,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData(
+            useMaterial3: false,
+            primaryColor: const Color(0xFFB266FF),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFB266FF),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textTheme: const TextTheme(bodyMedium: TextStyle(fontSize: 14)),
+            dialogTheme: DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-
     if (result != null) {
       setState(() => selectedDateRange = result);
     }
@@ -86,7 +110,6 @@ class _FortunePageState extends State<FortunePage> {
     final result = fortunes[Random().nextInt(fortunes.length)];
     setState(() => fortuneResult = result);
 
-    // นำทางไปหน้า TripTypePage พร้อมส่งข้อมูลที่เลือก
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -94,7 +117,7 @@ class _FortunePageState extends State<FortunePage> {
           dateRange: selectedDateRange!,
           province: selectedProvince!,
           fortune: result,
-          companion: 'เพื่อนเดินทาง', // สามารถส่งข้อมูลอื่น ๆ เช่น ข้อมูลเพื่อนที่เดินทางได้
+          companion: 'เพื่อนเดินทาง',
         ),
       ),
     );
@@ -104,14 +127,13 @@ class _FortunePageState extends State<FortunePage> {
   Widget build(BuildContext context) {
     return MainLayout(
       appBar: const CustomAppBar(),
-      currentIndex: 0, // หรือ 1
+      currentIndex: 0,
       onTap: (index) {
         if (index == 0) {
           if (Navigator.canPop(context)) {
-            Navigator.pop(context); // 🔙 ย้อนกลับ
+            Navigator.pop(context);
           } else {
-            Navigator.pushReplacementNamed(
-                context, '/home'); // fallback ไปหน้า home
+            Navigator.pushReplacementNamed(context, '/home');
           }
         } else {
           Navigator.pushReplacementNamed(context, '/home');
@@ -127,49 +149,73 @@ class _FortunePageState extends State<FortunePage> {
             children: [
               const Text(
                 'เสี่ยงดวง✨',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
 
-              // จังหวัด (Dropdown ที่ดึงข้อมูลจาก API)
-              provinces.isEmpty
-                  ? const CircularProgressIndicator() // แสดง loader เมื่อข้อมูลยังไม่มา
-                  : Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      margin: const EdgeInsets.only(bottom: 16),
+              // จังหวัด
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton2<String>(
+                    focusNode: dropdownFocusNode,
+                    isExpanded: true,
+                    hint: const Text("จังหวัดที่จะไป?"),
+                    value: selectedProvince,
+                    items: provinces
+                        .map((prov) => DropdownMenuItem(
+                              value: prov,
+                              child: Text(prov),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => selectedProvince = value);
+                    },
+                    buttonStyleData: ButtonStyleData(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          hint: const Text("จังหวัดที่จะไป?"),
-                          value: selectedProvince,
-                          items: provinces
-                              .map((prov) => DropdownMenuItem(
-                                    value: prov,
-                                    child: Text(prov),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() => selectedProvince = value);
-                          },
+                        border: Border.all(
+                          color: isDropdownOpen
+                              ? const Color(0xFFB266FF)
+                              : Colors.grey.shade300,
+                          width: 1.5,
                         ),
+                        boxShadow: isDropdownOpen
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFFB266FF).withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ]
+                            : [],
                       ),
                     ),
+                    dropdownStyleData: DropdownStyleData(
+                      maxHeight: 250,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      scrollbarTheme: ScrollbarThemeData(
+                        radius: const Radius.circular(8),
+                        thickness: WidgetStateProperty.all(6),
+                        thumbColor:
+                            WidgetStateProperty.all(const Color(0xFFB266FF)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
               // วันที่
               InkWell(
                 onTap: pickDateRange,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   margin: const EdgeInsets.only(bottom: 32),
                   decoration: BoxDecoration(
                     color: Colors.white,

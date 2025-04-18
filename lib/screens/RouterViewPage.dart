@@ -40,10 +40,8 @@ class _ViewRoutePageState extends State<ViewRoutePage> {
       for (var place in dayList) {
         if (!place.containsKey('lat') || !place.containsKey('lon')) {
           final fetched = await ApiService().getPlaceById(place['place_id']);
-          if (fetched != null) {
-            place['lat'] = fetched['lat'];
-            place['lon'] = fetched['lon'];
-          }
+          place['lat'] = fetched['lat'];
+          place['lon'] = fetched['lon'];
         }
       }
     }

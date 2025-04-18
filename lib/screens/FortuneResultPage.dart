@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:tripplan_1/screens/FortuneSummaryPage.dart';
-import 'package:tripplan_1/widgets/main_layout.dart'; // นำเข้า MainLayout
-import 'package:tripplan_1/widgets/custom_app_bar.dart'; // นำเข้า CustomAppBar
+import 'package:tripplan_1/widgets/main_layout.dart';
+import 'package:tripplan_1/widgets/custom_app_bar.dart';
 
 class FortuneResultPage extends StatelessWidget {
   final String province;
   final DateTimeRange dateRange;
-  // final String fortune;
-  // final List<Map<String, dynamic>> places; //  รับสถานที่ที่สุ่มมาจาก ShakePage
   final Map<int, String> allFortunesByDay;
   final Map<int, List<Map<String, dynamic>>> allPlacesByDay;
+  final Map<int, String> tripTypesByDay;
 
   const FortuneResultPage({
     super.key,
     required this.province,
     required this.dateRange,
-    // required this.fortune,
-    // required this.places,
     required this.allFortunesByDay,
     required this.allPlacesByDay,
+    required this.tripTypesByDay,
   });
 
   @override
@@ -63,8 +61,7 @@ class FortuneResultPage extends StatelessWidget {
                         dateRange: dateRange,
                         allFortunesByDay: allFortunesByDay,
                         allPlacesByDay: allPlacesByDay,
-                        // fortune: fortune,
-                        // places: places,
+                        tripTypesByDay: tripTypesByDay,
                       ),
                     ),
                   );

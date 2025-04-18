@@ -21,16 +21,16 @@ class CustomBottomNav extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             color: Colors.white,
-            onPressed: () => onTap(0),
+            onPressed: () => onTap(0), // index 0 = back
           ),
 
-          // ปุ่ม home
+// ปุ่ม home
           IconButton(
             icon: Icon(
               Icons.home,
-              color: currentIndex == 0 ? Colors.white : Colors.white54,
+              color: currentIndex == 1 ? Colors.white : Colors.white54,
             ),
-            onPressed: () => onTap(0),
+            onPressed: () => onTap(1), // index 1 = home จริง
           ),
 
           // เมนู 3 ขีด

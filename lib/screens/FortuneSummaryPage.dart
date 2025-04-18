@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:tripplan_1/widgets/main_layout.dart'; // นำเข้า MainLayout
 import 'package:tripplan_1/widgets/custom_app_bar.dart'; // นำเข้า CustomAppBar
-import 'package:tripplan_1/services/api.dart'; // นำเข้า ApiService สำหรับดึงข้อมูล
+// นำเข้า ApiService สำหรับดึงข้อมูล
 import 'PlaceDetailPage.dart';
+
 class FortuneSummaryPage extends StatefulWidget {
   final DateTimeRange dateRange;
   final String province;
   final Map<int, String> allFortunesByDay;
   final Map<int, List<Map<String, dynamic>>> allPlacesByDay;
+  final Map<int, String> tripTypesByDay;
+
   // final String fortune;
   // final List<Map<String, dynamic>> places;
 
@@ -17,6 +20,7 @@ class FortuneSummaryPage extends StatefulWidget {
     required this.province,
     required this.allFortunesByDay,
     required this.allPlacesByDay,
+    required this.tripTypesByDay,
     // required this.fortune,
     // required this.places,
   });
@@ -24,6 +28,7 @@ class FortuneSummaryPage extends StatefulWidget {
   @override
   _FortuneSummaryPageState createState() => _FortuneSummaryPageState();
 }
+
 class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
   @override
   Widget build(BuildContext context) {
@@ -66,6 +71,7 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
               final date = entry.value;
               final places = widget.allPlacesByDay[index] ?? [];
               final fortune = widget.allFortunesByDay[index] ?? 'ไม่พบดวง';
+              final tripType = widget.tripTypesByDay[index] ?? 'ไม่ระบุประเภท';
 
               return Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -83,6 +89,8 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Text("🔮 ดวงของคุณ: $fortune"),
+                      Text("🧭 ประเภทการเที่ยว: $tripType"),
+                      const SizedBox(height: 8),
                       const SizedBox(height: 24),
                       const Row(
                         children: [
@@ -110,9 +118,9 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
                               ),
                               title: Text(place['name'] ?? 'ไม่พบชื่อ'),
                               subtitle: GestureDetector(
-                                child: Text(
+                                child: const Text(
                                   "รายละเอียด",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.blue,
                                     decoration: TextDecoration.underline,
                                   ),
@@ -121,7 +129,8 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => PlaceDetailPage(place: place),
+                                      builder: (context) =>
+                                          PlaceDetailPage(place: place),
                                     ),
                                   );
                                 },
@@ -142,7 +151,8 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
   }
 
   List<DateTime> getTripDates() {
-    final days = widget.dateRange.end.difference(widget.dateRange.start).inDays + 1;
+    final days =
+        widget.dateRange.end.difference(widget.dateRange.start).inDays + 1;
     return List.generate(
       days,
       (i) => widget.dateRange.start.add(Duration(days: i)),
@@ -151,8 +161,19 @@ class _FortuneSummaryPageState extends State<FortuneSummaryPage> {
 
   String _monthShort(int month) {
     const months = [
-      '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+      '',
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.'
     ];
     return months[month];
   }

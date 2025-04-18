@@ -147,28 +147,36 @@ class ApiService {
       final encodedData = {
         ...data,
         'dayColors': (data['dayColors'] as Map).map(
-          (key, value) => MapEntry(key.toString(), value is Color ? value.value : 0),
+          (key, value) =>
+              MapEntry(key.toString(), value is Color ? value.value : 0),
         ),
-        'placesByDay': (data['placesByDay'] as Map).map((key, value) => MapEntry(
-              key.toString(),
-              (value as List).map((p) => {
-                    'place_id': p['place_id'],
-                    'expense': p['expense'],
-                    'order_index': p['order_index'],
-                    'category': p['category'],
-                  }).toList(),
-            )),
-        'favoritePlaces': (data['favoritePlaces'] as List).map((f) => {
-              'name': f['name'],
-              'lat': f['lat'],
-              'lon': f['lon'],
-              'category': f['category'],
-            }).toList(),
-        'otherExpenses': (data['otherExpenses'] as List).map((e) => {
-              'desc': e['desc'],
-              'amount': e['amount'],
-              'icon_code': (e['icon'] as IconData?)?.codePoint ?? 0,
-            }).toList(),
+        'placesByDay':
+            (data['placesByDay'] as Map).map((key, value) => MapEntry(
+                  key.toString(),
+                  (value as List)
+                      .map((p) => {
+                            'place_id': p['place_id'],
+                            'expense': p['expense'],
+                            'order_index': p['order_index'],
+                            'category': p['category'],
+                          })
+                      .toList(),
+                )),
+        'favoritePlaces': (data['favoritePlaces'] as List)
+            .map((f) => {
+                  'name': f['name'],
+                  'lat': f['lat'],
+                  'lon': f['lon'],
+                  'category': f['category'],
+                })
+            .toList(),
+        'otherExpenses': (data['otherExpenses'] as List)
+            .map((e) => {
+                  'desc': e['desc'],
+                  'amount': e['amount'],
+                  'icon_code': (e['icon'] as IconData?)?.codePoint ?? 0,
+                })
+            .toList(),
       };
 
       final res = await http.put(
@@ -189,7 +197,8 @@ class ApiService {
   // ✅ ดึงพิกัดจังหวัด
   Future<LatLng> getProvinceLatLng(String name) async {
     final encodedName = Uri.encodeComponent(name);
-    final response = await http.get(Uri.parse('$baseUrl/province/location?name=$encodedName'));
+    final response = await http
+        .get(Uri.parse('$baseUrl/province/location?name=$encodedName'));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -243,7 +252,6 @@ class ApiService {
     } catch (e) {
       debugPrint('Error fetching random places: $e');
       throw Exception('ไม่สามารถดึงข้อมูลสถานที่ได้');
-      
     }
   }
 }

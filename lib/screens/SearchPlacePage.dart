@@ -30,36 +30,42 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
     super.initState();
     favoritePlaces =
         List<Map<String, dynamic>>.from(widget.initialFavorites ?? []);
-    fetchPlaces();
+    selectedCategory = 'food';
+    fetchPlaces(widget.province, selectedCategory!);
   }
 
-  Future<void> fetchPlaces() async {
-    // final url = Uri.parse(
-    //     'http://10.0.2.2:3000/places?province=${Uri.encodeComponent(widget.province)}');
-    final url = Uri.parse('http://localhost:3000/places?province=${Uri.encodeComponent(widget.province)}');
+  Future<void> fetchPlaces(String province, [String? type]) async {
+    final trimmedProvince = province.trim();
+    final trimmedType = type?.trim();
+
+    // ใช้ endpoint ปกติ ไม่สุ่ม
+    const baseUrl = 'http://10.0.2.2:3000/places';
+    final url = trimmedType != null && trimmedType.isNotEmpty
+        ? Uri.parse('$baseUrl?province=$trimmedProvince&type=$trimmedType')
+        : Uri.parse('$baseUrl?province=$trimmedProvince');
 
     final res = await http.get(url);
 
     if (res.statusCode == 200) {
-      final List<dynamic> data = json.decode(res.body);
+      final List data = jsonDecode(res.body);
+      print('📍 ${data.length} places loaded (${type ?? 'all'})');
       setState(() {
         allPlaces = List<Map<String, dynamic>>.from(data);
       });
     } else {
-      debugPrint('[ERROR] Failed to load places: ${res.body}');
+      print('⚠️ Failed to load places: ${res.statusCode}');
+      setState(() {
+        allPlaces = [];
+      });
     }
   }
 
   List<Marker> getFilteredMarkers() {
     final markers = <Marker>[];
 
-    final filtered = allPlaces.where((place) {
-      final matchCategory =
-          selectedCategory == null || place['category'] == selectedCategory;
-      return matchCategory;
-    });
+    for (var place in allPlaces) {
+      if (place['lat'] == null || place['lon'] == null) continue;
 
-    for (var place in filtered) {
       markers.add(
         Marker(
           point: LatLng(place['lat'], place['lon']),
@@ -72,9 +78,9 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: place['category'] == 'food'
+                color: place['type'] == 'food'
                     ? Colors.green
-                    : place['category'] == 'hotel'
+                    : place['type'] == 'hotel'
                         ? Colors.pink
                         : Colors.orange,
                 boxShadow: [
@@ -87,9 +93,9 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
               ),
               child: Center(
                 child: Icon(
-                  place['category'] == 'food'
+                  place['type'] == 'food'
                       ? Icons.restaurant
-                      : place['category'] == 'hotel'
+                      : place['type'] == 'hotel'
                           ? Icons.hotel
                           : Icons.place,
                   color: Colors.white,
@@ -132,6 +138,14 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 120,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Center(child: Text('ไม่พบรูปภาพ')),
+                          );
+                        },
                       ),
                     ),
                   const SizedBox(height: 12),
@@ -170,7 +184,7 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
                     children: [
                       const Icon(Icons.schedule, size: 18),
                       const SizedBox(width: 8),
-                      Text("เปิด (${place['openingDays'] ?? 'ไม่ระบุ'})"),
+                      Text("เวลาเปิด-ปิด: ${place['hours'] ?? 'ไม่ระบุ'}"),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -255,9 +269,12 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
 
     return ElevatedButton(
       onPressed: () {
+        final newCategory = isSelected ? null : value;
         setState(() {
-          selectedCategory = isSelected ? null : value;
+          selectedCategory = newCategory;
+          allPlaces.clear();
         });
+        fetchPlaces(widget.province, newCategory);
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: isSelected ? const Color(0xFF1B9D66) : Colors.white,

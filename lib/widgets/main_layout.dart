@@ -6,6 +6,7 @@ class MainLayout extends StatelessWidget {
   final Widget body;
   final int currentIndex;
   final Function(int) onTap;
+  final Color? backgroundColor;
 
   const MainLayout({
     super.key,
@@ -13,6 +14,7 @@ class MainLayout extends StatelessWidget {
     required this.body,
     this.currentIndex = 0,
     required this.onTap,
+    this.backgroundColor,
   });
 
   @override
@@ -20,6 +22,7 @@ class MainLayout extends StatelessWidget {
     return Scaffold(
       appBar: appBar,
       body: body,
+      backgroundColor: backgroundColor ?? Colors.white,
       bottomNavigationBar: CustomBottomNav(
         currentIndex: currentIndex,
         onTap: onTap,

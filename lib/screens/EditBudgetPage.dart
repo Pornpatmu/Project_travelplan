@@ -200,7 +200,7 @@ class _EditBudgetPageState extends State<EditBudgetPage> {
           width: 100,
           child: TextField(
             controller: controller,
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(
               color: Color(0xFF1B9D66),
               fontSize: 16,

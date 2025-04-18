@@ -77,17 +77,17 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
         otherExpenses = widget.plan.otherExpenses;
         placesByDay = widget.plan.placesByDay;
 
-      //   final start = widget.plan.dateRange.start;
-      //   final end = widget.plan.dateRange.end;
-      //   final dayCount = end.difference(start).inDays + 1;
-      //   for (int i = 0; i < dayCount; i++) {
-      //     dayColors[i] = Colors.orange;
-      //   }
-      //   setState(() {});
-      //   return;
-      // }
+        //   final start = widget.plan.dateRange.start;
+        //   final end = widget.plan.dateRange.end;
+        //   final dayCount = end.difference(start).inDays + 1;
+        //   for (int i = 0; i < dayCount; i++) {
+        //     dayColors[i] = Colors.orange;
+        //   }
+        //   setState(() {});
+        //   return;
+        // }
 
-       final start = widget.plan.dateRange.start;
+        final start = widget.plan.dateRange.start;
         final end = widget.plan.dateRange.end;
         final difference = end.difference(start).inDays;
         final dayCount = end.difference(start).inDays + 1;
@@ -104,13 +104,12 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
           });
 
           return;
-        }else{
+        } else {
           for (int i = 0; i < dayCount; i++) {
-          dayColors[i] = Colors.orange;
-        }
-        setState(() {});
-        return;
-
+            dayColors[i] = Colors.orange;
+          }
+          setState(() {});
+          return;
         }
       }
 
@@ -493,13 +492,6 @@ class _PlanDetailPageState extends State<PlanDetailPage> {
     if (currentName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("กรุณากรอกชื่อแผนก่อนบันทึก")),
-      );
-      return;
-    }
-
-    if (widget.plan.dateRange.start == null || widget.plan.dateRange.end == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("กรุณาเลือกช่วงวันที่ก่อนบันทึก")),
       );
       return;
     }

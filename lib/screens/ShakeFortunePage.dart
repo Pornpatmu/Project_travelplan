@@ -1,6 +1,4 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:tripplan_1/screens/CompanionPage.dart';
 import 'package:tripplan_1/screens/FortuneResultPage.dart';
 import 'package:tripplan_1/widgets/main_layout.dart';
 import 'package:tripplan_1/widgets/custom_app_bar.dart';
@@ -103,6 +101,7 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
             dateRange: widget.dateRange,
             allPlacesByDay: allPlacesByDay,
             allFortunesByDay: allFortunesByDay,
+            tripTypesByDay: widget.selectedCategoriesByDay,
           ),
         ),
       );
@@ -152,9 +151,9 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text(
                           'เริ่มเสี่ยงดวงกันเลย',
                           style: TextStyle(
@@ -234,7 +233,7 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
 class DetailPage extends StatelessWidget {
   final String placeName;
 
-  DetailPage({required this.placeName});
+  const DetailPage({super.key, required this.placeName});
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +246,7 @@ class DetailPage extends StatelessWidget {
       body: Center(
         child: Text(
           "รายละเอียดของ $placeName",
-          style: TextStyle(fontSize: 20),
+          style: const TextStyle(fontSize: 20),
         ),
       ),
     );
