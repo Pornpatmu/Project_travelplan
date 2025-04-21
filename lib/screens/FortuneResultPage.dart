@@ -6,17 +6,17 @@ import 'package:tripplan_1/widgets/custom_app_bar.dart';
 class FortuneResultPage extends StatelessWidget {
   final String province;
   final DateTimeRange dateRange;
-  final Map<int, String> allFortunesByDay;
   final Map<int, List<Map<String, dynamic>>> allPlacesByDay;
   final Map<int, String> tripTypesByDay;
+  final String companion;
 
   const FortuneResultPage({
     super.key,
     required this.province,
     required this.dateRange,
-    required this.allFortunesByDay,
     required this.allPlacesByDay,
     required this.tripTypesByDay,
+    required this.companion,
   });
 
   @override
@@ -59,9 +59,9 @@ class FortuneResultPage extends StatelessWidget {
                       builder: (_) => FortuneSummaryPage(
                         province: province,
                         dateRange: dateRange,
-                        allFortunesByDay: allFortunesByDay,
                         allPlacesByDay: allPlacesByDay,
                         tripTypesByDay: tripTypesByDay,
+                        companion: companion,
                       ),
                     ),
                   );

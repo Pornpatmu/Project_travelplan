@@ -26,13 +26,37 @@ class _TripTypePageState extends State<TripTypePage>
   late TabController _tabController;
   Map<int, String> selectedTypes = {}; // วัน -> ประเภท
 
-  final List<String> tripTypes = [
-    "สายผจญภัย",
-    "สายคาเฟ่",
-    "สายธรรมชาติ",
-    "สายประวัติศาสตร์",
-    "สายทำบุญ & ครอบครัว",
-    "สายกลางคืน"
+  final categories = [
+    {
+      'label': 'ผจญภัย',
+      'value': 'adventure',
+      'icon': 'assets/icons/Adventure.png',
+    },
+    {
+      'label': 'คาเฟ่',
+      'value': 'cafe',
+      'icon': 'assets/icons/Cafe.png',
+    },
+    {
+      'label': 'ธรรมชาติ & ชมวิว',
+      'value': 'nature',
+      'icon': 'assets/icons/Nature.png',
+    },
+    {
+      'label': 'วัฒนธรรม & ประวัติศาสตร์',
+      'value': 'history',
+      'icon': 'assets/icons/History.png',
+    },
+    {
+      'label': 'ครอบครัว & ทำบุญ',
+      'value': 'family',
+      'icon': 'assets/icons/Family.png',
+    },
+    {
+      'label': 'สายเดินตลาดกลางคืน',
+      'value': 'nightlife',
+      'icon': 'assets/icons/Party.png',
+    },
   ];
 
   List<DateTime> getTripDates() {
@@ -59,6 +83,7 @@ class _TripTypePageState extends State<TripTypePage>
             province: widget.province,
             dateRange: widget.dateRange,
             selectedCategoriesByDay: selectedTypes,
+            companion: widget.companion,
           ),
         ),
       );
@@ -72,6 +97,20 @@ class _TripTypePageState extends State<TripTypePage>
   @override
   Widget build(BuildContext context) {
     final tripDates = getTripDates();
+    final monthsInThai = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.'
+    ];
 
     return MainLayout(
       appBar: const CustomAppBar(),
@@ -88,129 +127,163 @@ class _TripTypePageState extends State<TripTypePage>
         }
       },
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Text(
-                "เสี่ยงดวง✨",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "วันที่ ${_tabController.index + 1} (${tripDates[_tabController.index].day}/${tripDates[_tabController.index].month})",
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.purple,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TabBar(
-                controller: _tabController,
-                labelColor: Colors.purple,
-                unselectedLabelColor: Colors.black,
-                indicatorColor: Colors.purple,
-                isScrollable: true,
-                onTap: (_) => setState(() {}),
-                tabs: tripDates
-                    .asMap()
-                    .entries
-                    .map((entry) => Tab(
-                          child: Text(
-                            "วันที่ ${entry.key + 1}\n${entry.value.day}/${entry.value.month}",
-                            textAlign: TextAlign.center,
-                          ),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 24),
-
-              // กรอบที่ใส่ title
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(22),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // ใส่ title ที่ด้านบนของกรอบ
                     const Text(
-                      "เลือกประเภทการเที่ยวของคุณ", // ข้อความที่คุณต้องการ
-                      style: TextStyle(
-                        fontSize: 18, // ขนาดตัวอักษร
-                        fontWeight: FontWeight.bold, // ตัวหนา
-                        color: Colors.black, // สีข้อความ
+                      "เสี่ยงดวง✨",
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 15),
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: Colors.purple,
+                      unselectedLabelColor: Colors.black,
+                      indicatorColor: Colors.purple,
+                      isScrollable: true,
+                      onTap: (_) => setState(() {}),
+                      tabs: tripDates.asMap().entries.map((entry) {
+                        final date = entry.value;
+                        final thaiMonth = monthsInThai[date.month - 1];
+                        return Tab(
+                          text:
+                              "วันที่ ${entry.key + 1} (${date.day} $thaiMonth)",
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'เลือกประเภทการเที่ยวสำหรับวันที่ ${_tabController.index + 1} (${tripDates[_tabController.index].day} ${monthsInThai[tripDates[_tabController.index].month - 1]})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    Column(
+                      children: categories.map((category) {
+                        final isSelected =
+                            selectedTypes[_tabController.index] ==
+                                category['value'];
 
-                    // ตัวเลือกประเภทการเที่ยว
-                    ...tripTypes.map((type) {
-                      final isSelected =
-                          selectedTypes[_tabController.index] == type;
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          selectedTypes[_tabController.index] = type;
-                        }),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(
+                        return GestureDetector(
+                          onTap: () {
+                            final value = category['value'];
+                            if (value != null) {
+                              setState(() {
+                                selectedTypes[_tabController.index] = value;
+                              });
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
                                 color: isSelected
                                     ? Colors.purple
-                                    : Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(12),
-                            color: isSelected
-                                ? Colors.purple.shade50
-                                : Colors.white,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: isSelected
-                                    ? Colors.purple
-                                    : Colors.transparent,
+                                    : Colors.grey.shade300,
+                                width: 2,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  type,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.purple.withOpacity(0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                  : [],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: FittedBox(
+                                        fit: BoxFit.contain,
+                                        child: Image.asset(
+                                          category['icon']!,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return const Icon(
+                                                Icons.image_not_supported,
+                                                size: 20,
+                                                color: Colors.grey);
+                                          },
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    category['label']!,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.purple
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(Icons.check_circle,
+                                      color: Colors.purple),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: goNextPage,
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text("ถัดไป",
-                            style: TextStyle(color: Colors.purple)),
-                      ),
-                    )
+                        );
+                      }).toList(),
+                    ),
                   ],
                 ),
-              )
-            ],
-          ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: TextButton(
+                  onPressed: goNextPage,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.black87,
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ถัดไป',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(Icons.arrow_forward_ios),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          ],
         ),
       ),
     );

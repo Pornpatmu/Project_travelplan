@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../widgets/main_layout.dart';
 import '../widgets/custom_app_bar.dart';
-import 'TripTypePage.dart';
 import '../services/api.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:tripplan_1/screens/SelectCompanionPage.dart';
 
 class FortunePage extends StatefulWidget {
   const FortunePage({super.key});
@@ -113,11 +113,10 @@ class _FortunePageState extends State<FortunePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TripTypePage(
-          dateRange: selectedDateRange!,
+        builder: (context) => SelectCompanionPage(
           province: selectedProvince!,
+          dateRange: selectedDateRange!,
           fortune: result,
-          companion: 'เพื่อนเดินทาง',
         ),
       ),
     );

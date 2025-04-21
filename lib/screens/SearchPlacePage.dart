@@ -30,25 +30,23 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
     super.initState();
     favoritePlaces =
         List<Map<String, dynamic>>.from(widget.initialFavorites ?? []);
-    selectedCategory = 'food';
-    fetchPlaces(widget.province, selectedCategory!);
+    selectedCategory = null;
+    fetchPlaces(widget.province, null);
   }
 
-  Future<void> fetchPlaces(String province, [String? type]) async {
-    final trimmedProvince = province.trim();
-    final trimmedType = type?.trim();
-
-    // ใช้ endpoint ปกติ ไม่สุ่ม
+  Future<void> fetchPlaces(String province, String? type) async {
     const baseUrl = 'http://10.0.2.2:3000/places';
-    final url = trimmedType != null && trimmedType.isNotEmpty
-        ? Uri.parse('$baseUrl?province=$trimmedProvince&type=$trimmedType')
-        : Uri.parse('$baseUrl?province=$trimmedProvince');
+
+    // ✅ ถ้า type เป็น null → ไม่ใส่ type ไปใน query string
+    final url = (type != null && type.isNotEmpty)
+        ? Uri.parse('$baseUrl?province=$province&type=$type')
+        : Uri.parse('$baseUrl?province=$province');
 
     final res = await http.get(url);
 
     if (res.statusCode == 200) {
       final List data = jsonDecode(res.body);
-      print('📍 ${data.length} places loaded (${type ?? 'all'})');
+      print('📍 ${data.length} places loaded (${type ?? 'ALL'})');
       setState(() {
         allPlaces = List<Map<String, dynamic>>.from(data);
       });
@@ -80,7 +78,7 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
                 shape: BoxShape.circle,
                 color: place['type'] == 'food'
                     ? Colors.green
-                    : place['type'] == 'hotel'
+                    : place['type'] == 'accommodation'
                         ? Colors.pink
                         : Colors.orange,
                 boxShadow: [
@@ -95,7 +93,7 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
                 child: Icon(
                   place['type'] == 'food'
                       ? Icons.restaurant
-                      : place['type'] == 'hotel'
+                      : place['type'] == 'accommodation'
                           ? Icons.hotel
                           : Icons.place,
                   color: Colors.white,
@@ -251,9 +249,9 @@ class _SearchPlacePageState extends State<SearchPlacePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _categoryButton('ร้านอาหาร', 'food'),
+                _categoryButton('ร้านอาหาร&คาเฟ่', 'food'),
                 const SizedBox(width: 8),
-                _categoryButton('โรงแรม', 'hotel'),
+                _categoryButton('โรงแรม', 'accommodation'),
                 const SizedBox(width: 8),
                 _categoryButton('ที่เที่ยว', 'tourist'),
               ],

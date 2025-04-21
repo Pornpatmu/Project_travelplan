@@ -41,6 +41,8 @@ class CustomBottomNav extends StatelessWidget {
                 Navigator.pushReplacementNamed(context, '/fortune');
               } else if (value == 'customplan') {
                 Navigator.pushReplacementNamed(context, '/customplan');
+              } else if (value == 'history') {
+                Navigator.pushReplacementNamed(context, '/history');
               }
             },
             itemBuilder: (context) => [
@@ -51,6 +53,10 @@ class CustomBottomNav extends StatelessWidget {
               const PopupMenuItem(
                 value: 'customplan',
                 child: Text('วางแผนเอง'),
+              ),
+              const PopupMenuItem(
+                value: 'history',
+                child: Text('ประวัติแผนเที่ยว'),
               ),
             ],
           ),

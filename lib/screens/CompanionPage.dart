@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tripplan_1/screens/TripTypePage.dart';
 import 'package:tripplan_1/widgets/main_layout.dart';
-import 'package:tripplan_1/widgets/custom_app_bar.dart';  // นำเข้า CustomAppBar
+import 'package:tripplan_1/widgets/custom_app_bar.dart'; // นำเข้า CustomAppBar
 
 class CompanionPage extends StatefulWidget {
   final String province;
@@ -53,7 +53,7 @@ class _CompanionPageState extends State<CompanionPage> {
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      appBar: const CustomAppBar(),  // ใช้ CustomAppBar
+      appBar: const CustomAppBar(), // ใช้ CustomAppBar
       currentIndex: 0,
       onTap: (index) {
         if (index == 0) {

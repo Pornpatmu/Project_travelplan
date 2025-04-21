@@ -4,26 +4,17 @@ import 'package:tripplan_1/widgets/main_layout.dart';
 import 'package:tripplan_1/widgets/custom_app_bar.dart';
 import 'package:tripplan_1/services/api.dart';
 
-// ✅ แปลงชื่อหมวดที่ผู้ใช้เลือก (ไทย) ให้ตรงกับ API category
-final Map<String, String> thaiCategoryToApiCategory = {
-  'สายผจญภัย': 'adventure',
-  'สายคาเฟ่': 'cafe',
-  'สายธรรมชาติ': 'nature',
-  'สายประวัติศาสตร์': 'history',
-  'สายทำบุญ & ครอบครัว': 'family',
-  'สายกลางคืน': 'nightlife',
-};
-
 class ShakeFortunePage extends StatefulWidget {
   final String province;
   final DateTimeRange dateRange;
-  // final String selectedCategoriesByDay;
   final Map<int, String> selectedCategoriesByDay;
+  final String companion;
 
   const ShakeFortunePage({
     Key? key,
     required this.province,
     required this.dateRange,
+    required this.companion,
     required this.selectedCategoriesByDay,
   }) : super(key: key);
 
@@ -54,40 +45,52 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    _shakeAnimation = Tween<double>(begin: -10, end: 10)
-        .chain(CurveTween(curve: Curves.elasticInOut))
-        .animate(_controller);
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -0.1), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.1, end: 0.1), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.1, end: -0.1), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.1, end: 0), weight: 1),
+    ]).animate(_controller);
   }
 
   void _onShakePressed() async {
     _controller.forward(from: 0).then((_) async {
-      final List<String> fortuneList = [
-        'โชคดีมาก 🎉',
-        'ระวังเรื่องการเงิน 💸',
-        'ความรักกำลังมา 💕',
-        'มีข่าวดีเร็วๆ นี้ 📬',
-        'พักผ่อนบ้างนะ 😌',
-      ];
-
       final Map<int, List<Map<String, dynamic>>> allPlacesByDay = {};
-      final Map<int, String> allFortunesByDay = {};
 
       for (int i = 0; i < tripDates.length; i++) {
-        final selectedCategory = widget.selectedCategoriesByDay[i] ?? '';
-        final mappedCategory =
-            thaiCategoryToApiCategory[selectedCategory] ?? '';
-        final fortune = (fortuneList..shuffle()).first;
+        final category = widget.selectedCategoriesByDay[i];
+        if (category == null || category.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ไม่พบประเภทในวันที่ ${i + 1}')),
+          );
+          return;
+        }
 
         try {
+          // 🔍 Debug print
+          print('📦 QUERY → day=${i + 1}');
+          print('➡️ province = ${widget.province}');
+          print('➡️ category = $category');
+          print('➡️ companion = ${widget.companion}');
+
           final places = await ApiService().getRandomNearbyPlaces(
             widget.province,
-            mappedCategory,
+            category,
+            companion: widget.companion,
+            tripType: category,
           );
+
+          print('✅ ได้สถานที่ ${places.length} แห่งในวัน ${i + 1}');
           allPlacesByDay[i] = places;
-          allFortunesByDay[i] = fortune;
-        } catch (e) {
+        } catch (e, stack) {
+          print('❌ ERROR on day ${i + 1}: $e');
+          print('🧵 STACK TRACE:\n$stack');
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('เกิดข้อผิดพลาดในวันที่ ${i + 1}')),
+            SnackBar(
+              content: Text('เกิดข้อผิดพลาดในวันที่ ${i + 1}\n${e.toString()}'),
+              duration: const Duration(seconds: 5),
+            ),
           );
           return;
         }
@@ -100,8 +103,8 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
             province: widget.province,
             dateRange: widget.dateRange,
             allPlacesByDay: allPlacesByDay,
-            allFortunesByDay: allFortunesByDay,
             tripTypesByDay: widget.selectedCategoriesByDay,
+            companion: widget.companion,
           ),
         ),
       );
@@ -139,7 +142,7 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
               Container(
                 width: double.infinity,
                 constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height * 0.75,
+                  minHeight: MediaQuery.of(context).size.height * 0.55,
                 ),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -170,8 +173,8 @@ class _ShakeFortunePageState extends State<ShakeFortunePage>
                         child: AnimatedBuilder(
                           animation: _controller,
                           builder: (context, child) {
-                            return Transform.translate(
-                              offset: Offset(_shakeAnimation.value, 0),
+                            return Transform.rotate(
+                              angle: _shakeAnimation.value,
                               child: child,
                             );
                           },

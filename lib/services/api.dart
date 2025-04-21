@@ -147,8 +147,10 @@ class ApiService {
       final encodedData = {
         ...data,
         'dayColors': (data['dayColors'] as Map).map(
-          (key, value) =>
-              MapEntry(key.toString(), value is Color ? value.value : 0),
+          (key, value) => MapEntry(
+            key.toString(),
+            value is Color ? value.value : (value is int ? value : 0),
+          ),
         ),
         'placesByDay':
             (data['placesByDay'] as Map).map((key, value) => MapEntry(
@@ -219,39 +221,91 @@ class ApiService {
   }
 
   // ✅ ลบแผน
-  Future<void> deletePlan(int id) async {
-    final res = await http.delete(Uri.parse('$baseUrl/plans/$id'));
-    if (res.statusCode != 200) {
-      throw Exception('ลบแผนไม่สำเร็จ');
+  Future<bool> deletePlan(int id) async {
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/plans/$id'));
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ERROR] deletePlan: $e');
+      return false;
     }
   }
 
   // ✅ ดึงสถานที่แบบสุ่ม
   Future<List<Map<String, dynamic>>> getRandomNearbyPlaces(
+    String province,
+    String category, {
+    String? companion,
+    String? tripType,
+    bool onlyHotel = false,
+  }) async {
+    final query = {
+      'province': province,
+      'category': category,
+      'onlyHotel': onlyHotel.toString(),
+    };
+    if (companion != null) query['companion'] = companion;
+    if (tripType != null) query['tripType'] = tripType;
+
+    final uri = Uri.http('10.0.2.2:3000', '/places/random', query);
+    print('📦 [API] GET $uri');
+
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception("Failed to fetch random places");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlacesByType(
       String province, String category) async {
-    try {
-      final encodedProvince = Uri.encodeComponent(province);
-      final encodedCategory = Uri.encodeComponent(category);
+    final response = await http.get(Uri.parse(
+      '$baseUrl/places?province=$province&category=$category',
+    ));
 
-      final res = await http.get(Uri.parse(
-          '$baseUrl/places/random?province=$encodedProvince&category=$encodedCategory'));
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load places');
+    }
+  }
 
-      if (res.statusCode == 200) {
-        List<Map<String, dynamic>> places =
-            List<Map<String, dynamic>>.from(json.decode(res.body));
+  Future<List<Map<String, dynamic>>> getHotelsByProvince(
+      String province) async {
+    final uri = Uri.parse('$baseUrl/places?province=$province&onlyHotel=true');
+    final res = await http.get(uri);
+    if (res.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(res.body));
+    } else {
+      throw Exception('Failed to load hotels');
+    }
+  }
 
-        if (places.isNotEmpty) {
-          places.shuffle();
-          return places.take(3).toList();
-        } else {
-          throw Exception('ไม่พบสถานที่ในจังหวัดนี้');
-        }
-      } else {
-        throw Exception('ไม่สามารถดึงข้อมูลสถานที่ได้: ${res.body}');
-      }
-    } catch (e) {
-      debugPrint('Error fetching random places: $e');
-      throw Exception('ไม่สามารถดึงข้อมูลสถานที่ได้');
+  Future<List<Map<String, dynamic>>> getPlaces({
+    required String province,
+    String type = 'ALL',
+    String category = '',
+    String companion = '',
+    String tripType = '',
+    bool onlyHotel = false,
+  }) async {
+    final uri = Uri.parse('$baseUrl/places').replace(queryParameters: {
+      'province': province,
+      'type': type,
+      'category': category,
+      'companion': companion,
+      'tripType': tripType,
+      'onlyHotel': onlyHotel.toString(),
+    });
+
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    } else {
+      throw Exception('Failed to load places');
     }
   }
 }

@@ -5,7 +5,6 @@ import '../services/api.dart';
 import 'PlanDetailPage.dart';
 import '../models/travel_plan.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
 
 class CustomplanPage extends StatefulWidget {
   const CustomplanPage({super.key});
@@ -34,6 +33,18 @@ class _CustomplanPageState extends State<CustomplanPage> {
     });
   }
 
+  Future<void> fetchProvinces() async {
+    try {
+      provinces = await ApiService().getProvinces();
+    } catch (e) {
+      debugPrint('เกิดข้อผิดพลาด: $e');
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
   Future<void> pickDateRange() async {
     final DateTimeRange? result = await showDateRangePicker(
       context: context,
@@ -42,16 +53,16 @@ class _CustomplanPageState extends State<CustomplanPage> {
       builder: (context, child) {
         return Theme(
           data: ThemeData(
-            useMaterial3: false, // ปิด Material 3
+            useMaterial3: false,
             primaryColor: const Color(0xFF11AF6D),
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF11AF6D), // ปุ่ม + ขอบ
-              onPrimary: Colors.white, // ตัวอักษรบนปุ่ม
+              primary: Color(0xFF11AF6D),
+              onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
             ),
             textTheme: const TextTheme(
-              bodyMedium: TextStyle(fontSize: 14), // ปรับขนาดเลขในช่อง
+              bodyMedium: TextStyle(fontSize: 14),
             ),
             dialogTheme: DialogTheme(
               shape: RoundedRectangleBorder(
@@ -64,18 +75,8 @@ class _CustomplanPageState extends State<CustomplanPage> {
       },
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() => selectedDateRange = result);
-    }
-  }
-
-  Future<void> fetchProvinces() async {
-    try {
-      provinces = await ApiService().getProvinces();
-    } catch (e) {
-      debugPrint('โหลดจังหวัดล้มเหลว: $e');
-    } finally {
-      setState(() => isLoading = false);
     }
   }
 
@@ -86,12 +87,24 @@ class _CustomplanPageState extends State<CustomplanPage> {
       );
       return;
     }
-
+    final normalizedStart = DateTime(
+      selectedDateRange!.start.year,
+      selectedDateRange!.start.month,
+      selectedDateRange!.start.day,
+    );
+    final normalizedEnd = DateTime(
+      selectedDateRange!.end.year,
+      selectedDateRange!.end.month,
+      selectedDateRange!.end.day,
+      23,
+      59,
+      59,
+    );
     final newPlan = TravelPlan(
       id: 0,
       name: "แผนเที่ยวใหม่",
       province: selectedProvince!,
-      dateRange: selectedDateRange!,
+      dateRange: DateTimeRange(start: normalizedStart, end: normalizedEnd),
       budget: 0.0,
       spending: 0.0,
       favoritePlaces: [],
