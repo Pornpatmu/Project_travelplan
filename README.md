@@ -1,16 +1,8 @@
-# tripplan_1
+# TripPlan 🌏✨
 
-A new Flutter project.
+<img width="916" height="1788" alt="image" src="https://github.com/user-attachments/assets/8278f0af-9dd9-4d01-bd8a-49b6824d7b96" />
+<img width="886" height="1844" alt="image" src="https://github.com/user-attachments/assets/6fa1f65b-67f6-40ed-aa2d-d13c8b919164" />
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 💚 Features
+- ✍️ Custom Plan วางแผนเที่ยวด้วยตัวเอง  
+- 🎲 Trip Fortune! สุ่มสถานที่ท่องเที่ยว  
